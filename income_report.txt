@@ -1,0 +1,4 @@
+Check 2026 Income Report
+Total income rows: 36
+Jan 2026 rows (starts with 2026-01): 0
+Rows with /2026 in date: 0

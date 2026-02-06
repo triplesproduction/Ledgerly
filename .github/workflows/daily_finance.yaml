@@ -1,0 +1,39 @@
+name: Daily Financial Automation
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs at 00:00 UTC every day
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  daily-finance:
+    runs-on: ubuntu-latest
+    
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install -r tools/requirements.txt
+
+    - name: Verify Data Integrity
+      run: |
+        python tools/verify_integrity.py
+
+    - name: Recalculate Cashflow
+      run: |
+        python tools/recalculate_cashflow.py
+
+    - name: Sync Income (Mock)
+      run: |
+        python tools/sync_quote_income.py

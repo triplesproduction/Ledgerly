@@ -1,0 +1,31 @@
+name: Monthly Financial Closing
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Runs at 00:00 UTC on the 1st of every month
+  workflow_dispatch:
+
+jobs:
+  monthly-close:
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install -r tools/requirements.txt
+
+    - name: Close Month P&L
+      run: |
+        python tools/close_month_pl.py

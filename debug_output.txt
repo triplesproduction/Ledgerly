@@ -1,0 +1,3 @@
+Fetching last 20 income entries...
+Data:
+{"id":"a31dba6e-3251-48b3-86f2-4dc953a3d130","created_at":"2026-01-29T12:00:49.944512+00:00","date":"2025-12-30","amount":500,"description":"Website Maintaince","category":"General","payment_method":"bank","client_id":null,"status":"RECEIVED"}
