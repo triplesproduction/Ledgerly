@@ -44,4 +44,6 @@ yarn-error.log*
 
 # Temp
 *.txt
+.tmp/
+
 
