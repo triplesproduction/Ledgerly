@@ -192,8 +192,25 @@ export default function ClientsPage() {
 
     const handleDelete = async (id: string) => {
         const { error } = await supabase.from('clients').delete().eq('id', id);
+
         if (error) {
-            alert("Error deleting: " + error.message);
+            // Check for Foreign Key Violation (Postgres Code 23503)
+            if (error.code === '23503' || error.message.includes('foreign key constraint')) {
+                if (window.confirm("Cannot delete this client because they have existing Income records.\n\nWould you like to ARCHIVE them (mark as Inactive) instead?")) {
+                    await handleArchive(id);
+                }
+            } else {
+                alert("Error deleting: " + error.message);
+            }
+        } else {
+            fetchClients();
+        }
+    };
+
+    const handleArchive = async (id: string) => {
+        const { error } = await supabase.from('clients').update({ status: 'Inactive' }).eq('id', id);
+        if (error) {
+            alert("Error archiving: " + error.message);
         } else {
             fetchClients();
         }
