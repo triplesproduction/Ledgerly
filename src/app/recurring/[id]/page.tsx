@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, History, Plus, Pencil, Trash } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { RetainerContract, ContractVersion, MonthlyInstance } from "@/types/retainer";
@@ -415,14 +416,12 @@ export default function RetainerDetailPage() {
                                 required
                             />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex flex-col">
                             <Label>Effective Date</Label>
-                            <Input
-                                type="date"
-                                className="bg-white/5 border-white/10"
-                                value={effectiveDate}
-                                onChange={e => setEffectiveDate(e.target.value)}
-                                required
+                            <DatePicker
+                                date={effectiveDate ? new Date(effectiveDate) : undefined}
+                                setDate={(d: Date | undefined) => setEffectiveDate(d ? format(d, "yyyy-MM-dd") : "")}
+                                className="bg-zinc-900/50 border-white/10 w-full"
                             />
                         </div>
 
