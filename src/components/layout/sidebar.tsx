@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Wallet,
@@ -20,8 +20,15 @@ import { Button } from "@/components/ui/button";
 
 export function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
 
     const isActive = (path: string) => pathname === path;
+
+    const handleLogout = async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        router.push('/login');
+        router.refresh();
+    };
 
     return (
         <div className="w-64 border-r border-white/5 bg-[#000000] flex flex-col h-screen fixed left-0 top-0 z-50">
@@ -83,7 +90,11 @@ export function Sidebar() {
             </div>
 
             <div className="mt-auto p-6 border-t border-white/5">
-                <Button variant="ghost" className="w-full justify-start text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 px-4 h-11 rounded-xl">
+                <Button
+                    variant="ghost"
+                    className="w-full justify-start text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 px-4 h-11 rounded-xl"
+                    onClick={handleLogout}
+                >
                     <LogOut size={20} className="mr-3" />
                     Logout
                 </Button>
