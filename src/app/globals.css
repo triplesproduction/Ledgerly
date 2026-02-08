@@ -92,6 +92,8 @@
   /* SIDEBAR SPECIFIC SCROLLBAR: Only show on hover */
   .sidebar-scroll-area::-webkit-scrollbar-thumb {
     background-color: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .sidebar-scroll-area:hover::-webkit-scrollbar-thumb {
