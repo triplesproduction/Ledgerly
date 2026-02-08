@@ -77,7 +77,7 @@ export function Sidebar() {
             </div>
 
             {/* Scrollable: Navigation */}
-            <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar sidebar-scroll-area">
                 <nav className="space-y-1 pb-4">
                     <NavItem href="/" icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive("/")} />
                     <NavItem href="/clients" icon={<Users size={20} />} label="Clients" active={isActive("/clients")} />

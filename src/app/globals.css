@@ -89,17 +89,13 @@
     /* Theme Orange on Hover */
   }
 
-  /* Force Orange Thumb for specific scroll areas if needed, 
-     but keeping it subtle default with orange hover is classy. 
-     Or user asked for theme colour specifically. Let's make it theme color by default but distinctive. */
-  ::-webkit-scrollbar-thumb {
-    background: rgba(249, 115, 22, 0.4);
-    /* Semi-transparent Orange */
+  /* SIDEBAR SPECIFIC SCROLLBAR: Only show on hover */
+  .sidebar-scroll-area::-webkit-scrollbar-thumb {
+    background-color: transparent;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #f97316;
-    /* Full Orange */
+  .sidebar-scroll-area:hover::-webkit-scrollbar-thumb {
+    background-color: #404040;
   }
 }
 
