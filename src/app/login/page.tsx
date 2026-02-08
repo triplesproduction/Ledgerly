@@ -5,13 +5,14 @@ import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Lock, User } from 'lucide-react'
+import { Lock, User, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
     const router = useRouter()
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -80,13 +81,20 @@ export default function LoginPage() {
                             <div className="relative">
                                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-zinc-500" />
                                 <Input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="••••••••"
-                                    className="bg-white/5 border-white/10 pl-10 h-11 text-white focus:ring-orange-500/50 focus:border-orange-500"
+                                    className="bg-white/5 border-white/10 pl-10 pr-10 h-11 text-white focus:ring-orange-500/50 focus:border-orange-500"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
                             </div>
                         </div>
                     </div>
