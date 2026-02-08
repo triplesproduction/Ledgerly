@@ -32,8 +32,9 @@ export function Sidebar() {
 
     return (
         <div className="w-64 border-r border-white/5 bg-[#000000] flex flex-col h-screen fixed left-0 top-0 z-50">
-            <div className="p-6">
-                <div className="flex items-center gap-3 mb-6">
+            {/* Header: Logo */}
+            <div className="p-6 pb-2 shrink-0">
+                <div className="flex items-center gap-3">
                     <div className="h-10 w-10 relative flex-shrink-0">
                         {/* Glass Logo SVG v3: Enhanced Frost & Depth */}
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" className="w-full h-full drop-shadow-2xl">
@@ -73,8 +74,11 @@ export function Sidebar() {
                         <div className="text-[10px] text-muted-foreground font-medium mt-1 uppercase tracking-wider">Triple S Production</div>
                     </div>
                 </div>
+            </div>
 
-                <nav className="space-y-1">
+            {/* Scrollable: Navigation */}
+            <div className="flex-1 overflow-y-auto px-6 py-2 custom-scrollbar">
+                <nav className="space-y-1 pb-4">
                     <NavItem href="/" icon={<LayoutDashboard size={20} />} label="Dashboard" active={isActive("/")} />
                     <NavItem href="/clients" icon={<Users size={20} />} label="Clients" active={isActive("/clients")} />
                     <NavItem href="/services" icon={<Briefcase size={20} />} label="Services" active={isActive("/services")} />
@@ -89,7 +93,8 @@ export function Sidebar() {
                 </nav>
             </div>
 
-            <div className="mt-auto p-6 border-t border-white/5">
+            {/* Footer: Logout */}
+            <div className="p-6 border-t border-white/5 bg-[#000000] shrink-0 z-10">
                 <Button
                     variant="ghost"
                     className="w-full justify-start text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 px-4 h-11 rounded-xl"
