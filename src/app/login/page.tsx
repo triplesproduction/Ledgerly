@@ -115,7 +115,7 @@ export default function LoginPage() {
                 </form>
 
                 <div className="text-center text-[10px] text-zinc-600 mt-6">
-                    <p>Protected by Layer-7 Middleware & AES-256 Encryption</p>
+                    <p className="opacity-50 hover:opacity-100 transition-opacity duration-300">made by Triple S Production</p>
                 </div>
             </div>
         </div>
