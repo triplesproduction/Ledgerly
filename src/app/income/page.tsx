@@ -32,6 +32,7 @@ type IncomeItem = {
     amount: number;
     description: string;
     status: string;
+    payment_method?: string;
 };
 
 // Hover Tooltip using Popover
@@ -240,7 +241,8 @@ export default function IncomePage() {
                     service_name: item.services?.name,
                     amount: Number(item.amount),
                     description: item.description,
-                    status: item.status || "RECEIVED"
+                    status: item.status || "RECEIVED",
+                    payment_method: item.payment_method
                 };
             });
             setIncomeData(formatted);
@@ -295,7 +297,7 @@ export default function IncomePage() {
             description: item.description || "",
             date: new Date(item.date),
             status: item.status,
-            payment_method: (item as any).payment_method || "bank"
+            payment_method: item.payment_method || "bank"
         });
         setIsModalOpen(true);
     };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Check, MoreHorizontal } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,23 +9,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-
 import { supabase } from "@/lib/supabase";
-import { useEffect } from "react";
 
 
 export default function ServicesPage() {
     const [services, setServices] = useState<any[]>([]);
-    const [serviceStats, setServiceStats] = useState<Record<string, { income: number, clients: number }>>({});
+    const [rawIncome, setRawIncome] = useState<any[]>([]);
+    const [selectedYear, setSelectedYear] = useState<string>("Lifetime");
     const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [newService, setNewService] = useState({ name: "", status: "Active" });
     const [isEditing, setIsEditing] = useState(false);
     const [currentServiceId, setCurrentServiceId] = useState<string | null>(null);
     const [validationError, setValidationError] = useState("");
-
-
 
     const fetchServices = async () => {
         setIsLoading(true);
@@ -46,52 +42,60 @@ export default function ServicesPage() {
         // Fetch ALL income entries that have a service_id (Lifetime Totals)
         const { data, error } = await supabase
             .from("income")
-            .select("service_id, amount, description")
+            .select("service_id, amount, description, date")
             .not("service_id", "is", null);
 
         if (!error && data) {
-            // Aggregate totals and unique clients by service_id
-            const stats: Record<string, { income: number, clients: Set<string> }> = {};
-
-            data.forEach((item: any) => {
-                if (!stats[item.service_id]) {
-                    stats[item.service_id] = { income: 0, clients: new Set() };
-                }
-
-                // Add income
-                stats[item.service_id].income += parseFloat(item.amount) || 0;
-
-                // Extract client name from description (Format: "Client Name: Description" or just take whole if no colon?)
-                // Assuming format "Client Name: Description" as per Income page logic
-                let clientName = "";
-                if (item.description && item.description.includes(":")) {
-                    clientName = item.description.split(":")[0].trim();
-                } else {
-                    // Fallback strategies or ignore? Let's use the whole description as client name if no colon? 
-                    // Or maybe checks client_id? 
-                    // Let's stick to the convention. If no colon, treat as "General Client" or skip?
-                    // Let's treat the whole string as client name if it looks like a name? 
-                    // Safest: Use the part before first colon.
-                    clientName = item.description ? item.description.split(":")[0].trim() : "Unknown";
-                }
-
-                if (clientName && clientName !== "Unknown") {
-                    stats[item.service_id].clients.add(clientName.toLowerCase()); // Case insensitive count
-                }
-            });
-
-            // Convert Sets to numbers
-            const finalStats: Record<string, { income: number, clients: number }> = {};
-            Object.keys(stats).forEach(id => {
-                finalStats[id] = {
-                    income: stats[id].income,
-                    clients: stats[id].clients.size
-                };
-            });
-
-            setServiceStats(finalStats);
+            setRawIncome(data);
         }
     };
+
+    // Derived Statistics
+    const availableYears = useMemo(() => {
+        return Array.from(new Set(rawIncome.map((item: any) => new Date(item.date).getFullYear())))
+            .filter(year => !isNaN(year))
+            .sort((a, b) => b - a);
+    }, [rawIncome]);
+
+    const serviceStats = useMemo(() => {
+        const stats: Record<string, { income: number, clients: Set<string> }> = {};
+
+        const filteredData = selectedYear === "Lifetime"
+            ? rawIncome
+            : rawIncome.filter((item: any) => new Date(item.date).getFullYear().toString() === selectedYear);
+
+        filteredData.forEach((item: any) => {
+            if (!stats[item.service_id]) {
+                stats[item.service_id] = { income: 0, clients: new Set() };
+            }
+
+            // Add income
+            stats[item.service_id].income += parseFloat(item.amount) || 0;
+
+            // Extract client name
+            let clientName = "";
+            if (item.description && item.description.includes(":")) {
+                clientName = item.description.split(":")[0].trim();
+            } else {
+                clientName = item.description ? item.description.split(":")[0].trim() : "Unknown";
+            }
+
+            if (clientName && clientName !== "Unknown") {
+                stats[item.service_id].clients.add(clientName.toLowerCase()); // Case insensitive count
+            }
+        });
+
+        // Convert Sets to numbers
+        const finalStats: Record<string, { income: number, clients: number }> = {};
+        Object.keys(stats).forEach(id => {
+            finalStats[id] = {
+                income: stats[id].income,
+                clients: stats[id].clients.size
+            };
+        });
+
+        return finalStats;
+    }, [rawIncome, selectedYear]);
 
     // Initial load and real-time subscription
     useEffect(() => {
@@ -197,6 +201,18 @@ export default function ServicesPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white rounded-full h-10 px-4 text-xs font-medium">
+                            <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1c1c21] border-white/10 text-white min-w-[120px]">
+                            <SelectItem value="Lifetime">Lifetime</SelectItem>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
                     <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
                         <DialogTrigger asChild>
                             <Button
@@ -289,7 +305,9 @@ export default function ServicesPage() {
                     <TableHeader className="bg-white/5 hover:bg-white/5">
                         <TableRow className="border-white/5">
                             <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground pl-6 h-12">Service Category</TableHead>
-                            <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground h-12">Lifetime Income</TableHead>
+                            <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground h-12">
+                                {selectedYear === "Lifetime" ? "Lifetime Income" : `${selectedYear} Income`}
+                            </TableHead>
                             <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground h-12">Total Clients</TableHead>
                             <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground h-12">Status</TableHead>
                             <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground pr-6 h-12"></TableHead>
