@@ -42,7 +42,7 @@ export default function ServicesPage() {
         // Fetch ALL income entries that have a service_id (Lifetime Totals)
         const { data, error } = await supabase
             .from("income")
-            .select("service_id, amount, description, date")
+            .select("service_id, amount, description, date, client_id, clients(name)")
             .not("service_id", "is", null);
 
         if (!error && data) {
@@ -72,16 +72,22 @@ export default function ServicesPage() {
             // Add income
             stats[item.service_id].income += parseFloat(item.amount) || 0;
 
-            // Extract client name
-            let clientName = "";
-            if (item.description && item.description.includes(":")) {
-                clientName = item.description.split(":")[0].trim();
+            // Count unique clients
+            // Prioritize client_id, fallback to description parsing if necessary (for legacy data)
+            if (item.client_id) {
+                stats[item.service_id].clients.add(item.client_id);
             } else {
-                clientName = item.description ? item.description.split(":")[0].trim() : "Unknown";
-            }
+                // Legacy fallback: Extract client name from description
+                let clientName = "";
+                if (item.description && item.description.includes(":")) {
+                    clientName = item.description.split(":")[0].trim();
+                } else {
+                    clientName = item.description ? item.description.split(":")[0].trim() : "Unknown";
+                }
 
-            if (clientName && clientName !== "Unknown") {
-                stats[item.service_id].clients.add(clientName.toLowerCase()); // Case insensitive count
+                if (clientName && clientName !== "Unknown") {
+                    stats[item.service_id].clients.add(clientName.toLowerCase()); // Case insensitive count
+                }
             }
         });
 

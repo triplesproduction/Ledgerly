@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Users, Plus, Mail, Building, Search, Pencil, Trash2, AlertTriangle, Filter, RefreshCw } from "lucide-react";
@@ -11,16 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 
-interface Client {
-    id: string;
-    name: string;
-    industry: string;
-    email: string;
-    value: number;
-    status: string;
-}
+import { Client } from "@/types/general";
 
 export default function ClientsPage() {
+    const router = useRouter();
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -112,7 +107,8 @@ export default function ClientsPage() {
                     industry: c.industry || "General",
                     email: c.email || "—",
                     value: calculatedValue,
-                    status: c.status || "Active"
+                    status: c.status || "Active",
+                    created_at: c.created_at
                 };
             });
 
@@ -230,8 +226,8 @@ export default function ClientsPage() {
         })
         .sort((a, b) => {
             switch (sortBy) {
-                case "value-high": return b.value - a.value;
-                case "value-low": return a.value - b.value;
+                case "value-high": return (b.value || 0) - (a.value || 0);
+                case "value-low": return (a.value || 0) - (b.value || 0);
                 case "name-asc": return a.name.localeCompare(b.name);
                 default: return 0;
             }
@@ -339,6 +335,7 @@ export default function ClientsPage() {
                             client={client}
                             onEdit={() => openEditModal(client)}
                             onDelete={() => handleDelete(client.id)}
+                            onView={() => router.push(`/clients/${client.id}`)}
                         />
                     ))}
                     {filteredClients.length === 0 && (
@@ -408,7 +405,7 @@ export default function ClientsPage() {
     )
 }
 
-function ClientCard({ client, onEdit, onDelete }: { client: Client, onEdit: () => void, onDelete: () => void }) {
+function ClientCard({ client, onEdit, onDelete, onView }: { client: Client, onEdit: (e: any) => void, onDelete: () => void, onView: () => void }) {
     // 2-Step Deletion State
     const [deleteStep, setDeleteStep] = useState(0);
 
@@ -430,7 +427,10 @@ function ClientCard({ client, onEdit, onDelete }: { client: Client, onEdit: () =
     };
 
     return (
-        <Card className="bg-card border-white/5 hover:border-white/10 transition-colors rounded-3xl group relative overflow-hidden">
+        <Card
+            onClick={onView}
+            className="bg-card border-white/5 hover:border-white/10 transition-colors rounded-3xl group relative overflow-hidden cursor-pointer hover:bg-white/5"
+        >
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6">
                 <div className="flex flex-col">
                     <CardTitle className="text-[15px] font-semibold text-foreground group-hover:text-orange-500 transition-colors mb-1">
@@ -441,14 +441,14 @@ function ClientCard({ client, onEdit, onDelete }: { client: Client, onEdit: () =
                     </Badge>
                 </div>
                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={onEdit}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={(e) => { e.stopPropagation(); onEdit(e); }}>
                         <Pencil size={14} />
                     </Button>
                     <Button
                         variant={deleteStep === 1 ? "destructive" : "ghost"}
                         size="icon"
                         className={`h-8 w-8 text-muted-foreground transition-all ${deleteStep === 1 ? 'bg-red-500/20 text-red-500 w-24 px-2' : 'hover:text-red-400'}`}
-                        onClick={handleDeleteClick}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(); }}
                     >
                         {deleteStep === 1 ? <span className="text-[10px] font-bold whitespace-nowrap">Confirm?</span> : <Trash2 size={14} />}
                     </Button>
@@ -470,7 +470,7 @@ function ClientCard({ client, onEdit, onDelete }: { client: Client, onEdit: () =
                         <div className="flex flex-col items-end">
                             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">Lifetime Value</span>
                             <span className="text-[16px] font-bold text-orange-500">
-                                ₹{client.value.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                ₹{(client.value || 0).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </span>
                         </div>
                     </div>
