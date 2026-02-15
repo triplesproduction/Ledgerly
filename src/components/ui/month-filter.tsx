@@ -134,7 +134,7 @@ export function MonthFilter() {
     return (
         <div className="flex items-center gap-3">
             {/* Unified Filter Container */}
-            <div className="flex items-center bg-white/5 h-10 rounded-xl px-1">
+            <div className="flex items-center bg-white/5 h-10 rounded-xl px-1.5 gap-1">
                 <Button
                     variant="ghost"
                     size="icon"
@@ -144,12 +144,12 @@ export function MonthFilter() {
                     <ChevronLeft size={16} />
                 </Button>
 
-                <div className="flex items-center px-1 gap-1">
+                <div className="flex items-center px-2 gap-2">
                     <Select
                         value={selectedMonth.toString()}
                         onValueChange={handleMonthChange}
                     >
-                        <SelectTrigger className="border-0 bg-transparent h-8 text-sm font-semibold text-white focus:ring-0 px-2 min-w-[100px] hover:bg-white/5 rounded-md">
+                        <SelectTrigger className="border-0 bg-transparent h-8 text-sm font-semibold text-white focus:ring-0 px-2 min-w-[110px] hover:bg-white/5 rounded-md text-center justify-center gap-2">
                             <SelectValue>{months[selectedMonth]}</SelectValue>
                         </SelectTrigger>
                         <SelectContent className="bg-[#121214] border-white/10 text-white max-h-[300px] z-[100]">
@@ -167,7 +167,7 @@ export function MonthFilter() {
                         value={selectedYear.toString()}
                         onValueChange={handleYearChange}
                     >
-                        <SelectTrigger className="border-0 bg-transparent h-8 text-sm font-semibold text-white focus:ring-0 px-2 min-w-[70px] hover:bg-white/5 rounded-md">
+                        <SelectTrigger className="border-0 bg-transparent h-8 text-sm font-semibold text-white focus:ring-0 px-2 min-w-[80px] hover:bg-white/5 rounded-md text-center justify-center gap-2">
                             <SelectValue>{selectedYear}</SelectValue>
                         </SelectTrigger>
                         <SelectContent className="bg-[#121214] border-white/10 text-white z-[100]">

@@ -548,7 +548,7 @@ export default function IncomePage() {
                         <DialogTitle>{isEditing ? "Edit Income" : "Add Income"}</DialogTitle>
                     </DialogHeader>
 
-                    <div className="grid gap-5 px-6 py-2">
+                    <div className="grid gap-7 px-6 py-4">
                         <div className="grid gap-2">
                             <Label>Client Name</Label>
                             <ClientSelector
@@ -557,7 +557,7 @@ export default function IncomePage() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                             <div className="grid gap-2">
                                 <Label>Amount</Label>
                                 <div className="relative">
@@ -622,7 +622,7 @@ export default function IncomePage() {
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center px-6 py-5 border-t border-white/5 mt-2">
+                    <div className="flex justify-between items-center px-6 py-5 border-t border-white/5 mt-6">
                         {isEditing ? (
                             <Button
                                 variant="ghost"

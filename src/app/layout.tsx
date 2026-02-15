@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${montserrat.variable} font-sans antialiased bg-background min-h-screen`}>
+      <body className={`${montserrat.variable} font-sans antialiased bg-background min-h-screen overflow-x-hidden`}>
         <AppShell>
           {children}
         </AppShell>

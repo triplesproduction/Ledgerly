@@ -107,7 +107,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                 <DialogHeader className="p-6 pb-2 space-y-1">
                     <DialogTitle>Edit Expense</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-5 px-6 py-2">
+                <div className="grid gap-7 px-6 py-4">
                     <div className="grid gap-2">
                         <Label className="text-muted-foreground text-xs">Category</Label>
                         <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
@@ -125,7 +125,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6">
                         <div className="grid gap-2">
                             <Label>Amount</Label>
                             <div className="relative">
@@ -172,7 +172,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-between items-center px-6 py-5 border-t border-white/5 mt-2">
+                <div className="flex justify-between items-center px-6 py-5 border-t border-white/5 mt-6">
                     <Button
                         variant="ghost"
                         onClick={handleDelete}
