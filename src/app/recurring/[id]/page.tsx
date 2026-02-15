@@ -194,35 +194,46 @@ export default function RetainerDetailPage() {
         }
 
         // 2. Cascade Update to Income Descriptions
-        // Fetch all versions -> instances -> to target income entries
-        const { data: versions } = await supabase.from('contract_versions').select('id').eq('contract_id', id);
-        if (versions && versions.length > 0) {
-            const versionIds = versions.map(v => v.id);
+        try {
+            // Fetch all versions -> instances -> to target income entries
+            const { data: versions } = await supabase.from('contract_versions').select('id').eq('contract_id', id);
 
-            const { data: instances } = await supabase.from('monthly_instances').select('id').in('contract_version_id', versionIds);
+            if (versions && versions.length > 0) {
+                const versionIds = versions.map(v => v.id);
 
-            if (instances && instances.length > 0) {
-                const instanceIds = instances.map(i => i.id);
+                const { data: instances } = await supabase.from('monthly_instances').select('id').in('contract_version_id', versionIds);
 
-                // Fetch income entries to get distinct milestone_labels
-                const { data: incomeEntries } = await supabase
-                    .from('income')
-                    .select('milestone_label')
-                    .in('retainer_instance_id', instanceIds);
+                if (instances && instances.length > 0) {
+                    const instanceIds = instances.map(i => i.id);
 
-                if (incomeEntries && incomeEntries.length > 0) {
-                    // Group updates by milestone_label for efficiency
-                    const labels = Array.from(new Set(incomeEntries.map((i: any) => i.milestone_label).filter(Boolean)));
+                    // Fetch income entries to get distinct milestone_labels
+                    const { data: incomeEntries } = await supabase
+                        .from('income')
+                        .select('milestone_label')
+                        .in('retainer_instance_id', instanceIds);
 
-                    for (const label of labels) {
-                        await supabase
-                            .from('income')
-                            .update({ description: `${editedName} - ${label}` })
-                            .in('retainer_instance_id', instanceIds)
-                            .eq('milestone_label', label);
+                    if (incomeEntries && incomeEntries.length > 0) {
+                        // Group updates by milestone_label for efficiency
+                        const labels = Array.from(new Set(incomeEntries.map((i: any) => i.milestone_label).filter(Boolean)));
+
+                        console.log("Updating income with new contract name:", editedName, "Labels:", labels);
+
+                        for (const label of labels) {
+                            // Update matching milestone_labels
+                            const { error: updateError } = await supabase
+                                .from('income')
+                                .update({ description: `${editedName} - ${label}` })
+                                .in('retainer_instance_id', instanceIds)
+                                .eq('milestone_label', label);
+
+                            if (updateError) console.error("Error updating income for label", label, updateError);
+                        }
                     }
                 }
             }
+        } catch (err) {
+            console.error("Error syncing income names:", err);
+            // Non-blocking error, allow UI to update
         }
 
         setContract({ ...contract, name: editedName });
