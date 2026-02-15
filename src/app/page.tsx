@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ServiceSelector } from "@/components/ui/service-selector";
 import { ClientSelector } from "@/components/ui/client-selector";
 import { RevenueAreaChart } from "@/components/charts/revenue-area-chart";
-import { format, startOfMonth } from "date-fns";
+import { format, startOfMonth, startOfYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -59,20 +59,18 @@ export default function Dashboard() {
     status: "RECEIVED"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [revenueView, setRevenueView] = useState<'lifetime' | 'monthly'>('lifetime');
+  const [revenueView, setRevenueView] = useState<'yearly' | 'monthly'>('monthly');
   const [financials, setFinancials] = useState({
-    revenue: 0,
-    expenses: 0,
-    netProfit: 0,
-    margin: 0,
+    yearlyRevenue: 0,
+    yearlyExpenses: 0,
+    yearlyNetProfit: 0,
+    yearlyMargin: 0,
     monthlyRevenue: 0,
     monthlyExpenses: 0,
     monthlyNetProfit: 0,
     monthlyMargin: 0
   });
-
   const [paymentMethods, setPaymentMethods] = useState<{ label: string, value: string }[]>([]);
-
   const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -86,7 +84,6 @@ export default function Dashboard() {
       if (catData) setExpenseCategories(catData);
 
       // Auto-Overdue Rule: Mark items as OVERDUE if 7 days past due
-      // We must respect 'expected_date' if it exists (snoozed items)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const thresholdDate = format(sevenDaysAgo, 'yyyy-MM-dd');
@@ -96,27 +93,18 @@ export default function Dashboard() {
         .select('id, date, expected_date, status')
         .neq('status', 'RECEIVED')
         .neq('status', 'OVERDUE')
-        .lt('date', thresholdDate); // Initial filter by original date
-
-      if (fetchError) console.error("Error fetching potential overdue items:", fetchError);
+        .lt('date', thresholdDate);
 
       if (candidates && candidates.length > 0) {
-        // Filter out items that are snoozed (expected_date is in future or recent enough)
         const overdueIds = candidates
           .filter(item => {
             const effectiveDateStr = item.expected_date || item.date;
-            // robust comparison using strings since format is YYYY-MM-DD
             return effectiveDateStr < thresholdDate;
           })
           .map(item => item.id);
 
         if (overdueIds.length > 0) {
-          const { error: updateError } = await supabase
-            .from('income')
-            .update({ status: 'OVERDUE' })
-            .in('id', overdueIds);
-
-          if (updateError) console.error("Error auto-updating overdue items:", updateError);
+          await supabase.from('income').update({ status: 'OVERDUE' }).in('id', overdueIds);
         }
       }
     };
@@ -129,7 +117,11 @@ export default function Dashboard() {
         .select('amount, date')
         .eq('status', 'RECEIVED');
 
-      const totalIncome = incomeData?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+      // Calculate Yearly Income
+      const startOfCurrentYear = format(startOfYear(new Date()), 'yyyy-MM-dd');
+      const yearlyIncome = incomeData
+        ?.filter(item => item.date >= startOfCurrentYear)
+        .reduce((sum, item) => sum + Number(item.amount), 0) || 0;
 
       // Calculate Monthly Income
       const startOfCurrentMonth = format(startOfMonth(new Date()), 'yyyy-MM-dd');
@@ -143,23 +135,27 @@ export default function Dashboard() {
         .select('amount, date')
         .eq('status', 'PAID');
 
-      const totalExpenses = expensesData?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
+      // Calculate Yearly Expenses
+      const yearlyExpenses = expensesData
+        ?.filter(item => item.date >= startOfCurrentYear)
+        .reduce((sum, item) => sum + Number(item.amount), 0) || 0;
 
       const monthlyExpenses = expensesData
         ?.filter(item => item.date >= startOfCurrentMonth)
         .reduce((sum, item) => sum + Number(item.amount), 0) || 0;
 
-      const netProfit = totalIncome - totalExpenses;
-      const margin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
+      // Calculate Net Profit & Margin
+      const yearlyNetProfit = yearlyIncome - yearlyExpenses;
+      const yearlyMargin = yearlyIncome > 0 ? (yearlyNetProfit / yearlyIncome) * 100 : 0;
 
       const monthlyNetProfit = monthlyIncome - monthlyExpenses;
       const monthlyMargin = monthlyIncome > 0 ? (monthlyNetProfit / monthlyIncome) * 100 : 0;
 
       setFinancials({
-        revenue: totalIncome,
-        expenses: totalExpenses,
-        netProfit,
-        margin,
+        yearlyRevenue: yearlyIncome,
+        yearlyExpenses: yearlyExpenses,
+        yearlyNetProfit,
+        yearlyMargin,
         monthlyRevenue: monthlyIncome,
         monthlyExpenses,
         monthlyNetProfit,
@@ -192,8 +188,9 @@ export default function Dashboard() {
     return () => {
       supabase.removeChannel(incomeSub);
       supabase.removeChannel(expenseSub);
-    }
+    };
   }, []);
+
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -507,25 +504,24 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-col relative z-10">
               <h3 className="text-[14px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                {revenueView === 'lifetime' ? 'Total Revenue' : 'Monthly Revenue'}
+                {revenueView === 'yearly' ? 'Yearly Revenue' : 'Monthly Revenue'}
               </h3>
               <div className="text-[42px] font-bold text-gradient-primary tracking-tight mb-2 text-white">
-                <Counter value={revenueView === 'lifetime' ? financials.revenue : financials.monthlyRevenue} prefix="₹" />
+                <Counter value={revenueView === 'yearly' ? financials.yearlyRevenue : financials.monthlyRevenue} prefix="₹" />
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setRevenueView(prev => prev === 'lifetime' ? 'monthly' : 'lifetime')}
+                  onClick={() => setRevenueView(prev => prev === 'yearly' ? 'monthly' : 'yearly')}
                   className="h-6 px-3 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center cursor-pointer hover:bg-orange-500/20 transition-colors gap-1.5 group/btn"
                 >
                   <Activity size={10} className="text-orange-500 group-hover/btn:animate-pulse" />
                   <span className="text-[11px] font-bold text-orange-500">
-                    {revenueView === 'lifetime' ? 'Switch to Monthly' : 'Show All Time'}
+                    {revenueView === 'yearly' ? 'Switch to Monthly' : 'Show This Year'}
                   </span>
                 </button>
               </div>
             </div>
           </Card>
-
 
           {/* 2. Total Expenses (Dark Theme) */}
           <Card className="border border-white/5 shadow-2xl bg-card rounded-3xl p-6 relative overflow-hidden group hover:bg-card">
@@ -534,15 +530,15 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-col relative z-10">
               <h3 className="text-[14px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                {revenueView === 'lifetime' ? 'Total Expenses' : 'Monthly Expenses'}
+                {revenueView === 'yearly' ? 'Yearly Expenses' : 'Monthly Expenses'}
               </h3>
               <div className="text-[42px] font-bold text-white tracking-tight mb-2">
-                <Counter value={revenueView === 'lifetime' ? financials.expenses : financials.monthlyExpenses} prefix="₹" />
+                <Counter value={revenueView === 'yearly' ? financials.yearlyExpenses : financials.monthlyExpenses} prefix="₹" />
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-6 px-2 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
                   <span className="text-[11px] font-bold text-zinc-400 font-mono">
-                    {revenueView === 'lifetime' ? 'All Time' : 'Current Month'}
+                    {revenueView === 'yearly' ? 'Current Year' : 'Current Month'}
                   </span>
                 </div>
               </div>
@@ -556,14 +552,14 @@ export default function Dashboard() {
             </div>
             <div className="flex flex-col relative z-10">
               <h3 className="text-[14px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                {revenueView === 'lifetime' ? 'Net Profit' : 'Monthly Profit'}
+                {revenueView === 'yearly' ? 'Net Profit (YTD)' : 'Monthly Profit'}
               </h3>
-              <div className={cn("text-[42px] font-bold tracking-tight mb-2", (revenueView === 'lifetime' ? financials.netProfit : financials.monthlyNetProfit) >= 0 ? "text-orange-500" : "text-red-500")}>
-                <Counter value={revenueView === 'lifetime' ? financials.netProfit : financials.monthlyNetProfit} prefix="₹" />
+              <div className={cn("text-[42px] font-bold tracking-tight mb-2", (revenueView === 'yearly' ? financials.yearlyNetProfit : financials.monthlyNetProfit) >= 0 ? "text-orange-500" : "text-red-500")}>
+                <Counter value={revenueView === 'yearly' ? financials.yearlyNetProfit : financials.monthlyNetProfit} prefix="₹" />
               </div>
               <div className="flex items-center gap-2">
-                <div className={cn("h-6 px-2 rounded-full border flex items-center justify-center", (revenueView === 'lifetime' ? financials.margin : financials.monthlyMargin) >= 0 ? "bg-orange-500/10 border-orange-500/20 text-orange-500" : "bg-red-500/10 border-red-500/20 text-red-500")}>
-                  <span className="text-[11px] font-bold">{(revenueView === 'lifetime' ? financials.margin : financials.monthlyMargin).toFixed(1)}% Margin</span>
+                <div className={cn("h-6 px-2 rounded-full border flex items-center justify-center", (revenueView === 'yearly' ? financials.yearlyMargin : financials.monthlyMargin) >= 0 ? "bg-orange-500/10 border-orange-500/20 text-orange-500" : "bg-red-500/10 border-red-500/20 text-red-500")}>
+                  <span className="text-[11px] font-bold">{(revenueView === 'yearly' ? financials.yearlyMargin : financials.monthlyMargin).toFixed(1)}% Margin</span>
                 </div>
               </div>
             </div>
