@@ -50,26 +50,25 @@ export default function ClientsPage() {
 
             if (error) throw error;
 
-            // 2. Fetch Income for LTV Calculation
-            // We fetch all income. Note: Supabase restricts response rows (default 1000). 
-            // Ideally we'd paginate or use an RPC. specific columns for smaller payload.
+            // 2. Fetch all income to calculate LTV (Lifetime Value)
             const { data: incomeData } = await supabase
                 .from("income")
-                .select("amount, description, client_id");
+                .select("amount, description, client_id, status");
 
             const ltvMap: Record<string, number> = {};
 
             if (incomeData && clientsData) {
                 incomeData.forEach((inc: any) => {
+                    // Filter: Only include paid/received amounts
+                    if (inc.status !== 'RECEIVED' && inc.status !== 'PAID') return;
+
                     let matchedClientId = inc.client_id;
                     const desc = inc.description ? inc.description.toLowerCase() : "";
 
-                    // Fallback: Try to match by name
+                    // Fallback: Try to match by name if client_id is missing
                     if (!matchedClientId && desc) {
-                        // Check if description starts with client name (e.g. "Client X: Project Y" or "Client X Project Y")
                         const matchedClient = clientsData.find((c: any) => {
                             const cName = c.name.toLowerCase().trim();
-                            // Exact match on parts or startsWith
                             return cName && (desc.startsWith(cName) || desc.includes(`${cName}:`));
                         });
                         if (matchedClient) matchedClientId = matchedClient.id;

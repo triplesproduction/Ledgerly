@@ -62,7 +62,9 @@ export default function ClientDetailPage() {
     if (isLoading) return <div className="p-8 text-white">Loading details...</div>;
     if (!client) return <div className="p-8 text-white">Client not found.</div>;
 
-    const totalValue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalValue = payments
+        .filter(p => p.status === 'RECEIVED' || p.status === 'PAID')
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return (
         <div className="min-h-screen bg-transparent p-8 font-sans text-foreground">
