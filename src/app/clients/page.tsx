@@ -173,6 +173,14 @@ export default function ClientsPage() {
         let result;
         if (isEditing && currentId) {
             result = await supabase.from('clients').update(payload).eq('id', currentId);
+
+            // Sync Client Name to Income Table
+            if (!result.error && formData.name) {
+                await supabase
+                    .from('income')
+                    .update({ client: formData.name })
+                    .eq('client_id', currentId);
+            }
         } else {
             // Initial value is 0, will be updated by calculation next fetch
             result = await supabase.from('clients').insert([{ ...payload, value: 0 }]);

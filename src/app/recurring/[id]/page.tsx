@@ -185,13 +185,48 @@ export default function RetainerDetailPage() {
 
     const handleUpdateName = async () => {
         if (!editedName.trim() || !contract) return;
+
+        // 1. Update Contract Name
         const { error } = await supabase.from('retainer_contracts').update({ name: editedName }).eq('id', id);
         if (error) {
             alert("Error updating name: " + error.message);
-        } else {
-            setContract({ ...contract, name: editedName });
-            setIsEditingName(false);
+            return;
         }
+
+        // 2. Cascade Update to Income Descriptions
+        // Fetch all versions -> instances -> to target income entries
+        const { data: versions } = await supabase.from('contract_versions').select('id').eq('contract_id', id);
+        if (versions && versions.length > 0) {
+            const versionIds = versions.map(v => v.id);
+
+            const { data: instances } = await supabase.from('monthly_instances').select('id').in('contract_version_id', versionIds);
+
+            if (instances && instances.length > 0) {
+                const instanceIds = instances.map(i => i.id);
+
+                // Fetch income entries to get distinct milestone_labels
+                const { data: incomeEntries } = await supabase
+                    .from('income')
+                    .select('milestone_label')
+                    .in('retainer_instance_id', instanceIds);
+
+                if (incomeEntries && incomeEntries.length > 0) {
+                    // Group updates by milestone_label for efficiency
+                    const labels = Array.from(new Set(incomeEntries.map((i: any) => i.milestone_label).filter(Boolean)));
+
+                    for (const label of labels) {
+                        await supabase
+                            .from('income')
+                            .update({ description: `${editedName} - ${label}` })
+                            .in('retainer_instance_id', instanceIds)
+                            .eq('milestone_label', label);
+                    }
+                }
+            }
+        }
+
+        setContract({ ...contract, name: editedName });
+        setIsEditingName(false);
     };
 
     const handleTogglePause = async () => {
