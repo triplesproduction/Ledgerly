@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Pencil } from "lucide-react";
 import { MonthFilter } from "@/components/ui/month-filter";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { startOfMonth, endOfMonth, format, isSameMonth } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
 import { EditExpenseDialog } from "@/components/expenses/edit-expense-dialog";
@@ -133,8 +133,11 @@ export default function ExpensesPage() {
             dataQuery = dataQuery.or(`vendor.ilike.${searchPattern},category.ilike.${searchPattern}`);
         }
 
+        // Determine if selected range is current month
+        const isCurrentMonth = isSameMonth(new Date(), from);
+
         const { data, error } = await dataQuery
-            .order('date', { ascending: false })
+            .order('date', { ascending: !isCurrentMonth })
             .range(offset, limit);
 
         if (data) {

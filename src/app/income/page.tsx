@@ -212,8 +212,10 @@ export default function IncomePage() {
             dataQuery = dataQuery.or(`client.ilike.${searchPattern},description.ilike.${searchPattern},category.ilike.${searchPattern}`);
         }
 
+        const isCurrentMonth = isSameMonth(new Date(), from);
+
         const { data, error } = await dataQuery
-            .order('date', { ascending: false })
+            .order('date', { ascending: !isCurrentMonth })
             .range(offset, limit);
 
         if (data) {
