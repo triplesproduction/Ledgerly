@@ -32,6 +32,6 @@ export interface MonthlyInstance {
     contract_version_id: string;
     month_date: string;
     total_due: number;
-    status: 'scheduled' | 'generated' | 'partial' | 'paid';
+    status: 'scheduled' | 'generated' | 'partial' | 'paid' | 'skipped';
     created_at: string;
 }

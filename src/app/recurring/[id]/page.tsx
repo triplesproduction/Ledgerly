@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, History, Plus, Pencil, Trash } from "lucide-react";
+import { ArrowLeft, Clock, History, Plus, Pencil, Trash, Play, PauseCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { RetainerContract, ContractVersion, MonthlyInstance } from "@/types/retainer";
 import { generateRetainerInstances } from "@/lib/retainer-logic";
-import { format } from "date-fns";
+import { format, addMonths, startOfMonth, isBefore } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -194,6 +194,88 @@ export default function RetainerDetailPage() {
         }
     };
 
+    const handleTogglePause = async () => {
+        if (!contract) return;
+        const isPaused = contract.status === 'paused';
+
+        if (!isPaused) {
+            if (!confirm("Are you sure you want to PAUSE this contract?\n\n- No new invoices will be generated.\n- You can resume at any time.")) return;
+
+            const { error } = await supabase
+                .from('retainer_contracts')
+                .update({ status: 'paused' })
+                .eq('id', id);
+
+            if (error) {
+                alert("Error pausing: " + error.message);
+            } else {
+                setContract({ ...contract, status: 'paused' });
+                fetchData();
+            }
+        } else {
+            if (!confirm("Are you sure you want to RESUME this contract?\n\n- We will check for missed months and mark them as 'skipped'.\n- The current month's invoice will be generated if missing.")) return;
+
+            setIsLoading(true);
+            try {
+                // 1. Identify Gap
+                let lastInstanceDate = instances.length > 0 ? new Date(instances[0].month_date) : null;
+
+                if (lastInstanceDate) {
+                    const today = new Date();
+                    const currentMonthStart = startOfMonth(today);
+
+                    // Start checking from the month AFTER the last instance
+                    let nextMonthToCheck = startOfMonth(addMonths(lastInstanceDate, 1));
+
+                    const skippedMonths = [];
+                    // Populate gap months strictly BEFORE current month
+                    while (isBefore(nextMonthToCheck, currentMonthStart)) {
+                        skippedMonths.push(nextMonthToCheck);
+                        nextMonthToCheck = addMonths(nextMonthToCheck, 1);
+                    }
+
+                    if (skippedMonths.length > 0) {
+                        const inserts = skippedMonths.map(date => {
+                            const dateStr = format(date, 'yyyy-MM-dd');
+                            // Find version active at that date (versions sorted desc)
+                            const ver = versions.find(v => v.effective_start_date <= dateStr);
+                            if (!ver) return null;
+
+                            return {
+                                contract_version_id: ver.id,
+                                month_date: dateStr,
+                                total_due: 0,
+                                status: 'skipped'
+                            };
+                        }).filter(Boolean);
+
+                        if (inserts.length > 0) {
+                            const { error: insError } = await supabase.from('monthly_instances').insert(inserts);
+                            if (insError) throw insError;
+                        }
+                    }
+                }
+
+                // 2. Set Active
+                const { error: upError } = await supabase
+                    .from('retainer_contracts')
+                    .update({ status: 'active' })
+                    .eq('id', id);
+                if (upError) throw upError;
+
+                // 3. Trigger Generation
+                await generateRetainerInstances();
+
+                // 4. Refresh
+                await fetchData();
+
+            } catch (err: any) {
+                alert("Error resuming: " + err.message);
+                setIsLoading(false);
+            }
+        }
+    };
+
     if (isLoading) return <div className="p-8 text-white">Loading details...</div>;
     if (!contract) return <div className="p-8 text-white">Contract not found.</div>;
 
@@ -233,6 +315,21 @@ export default function RetainerDetailPage() {
                                 <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 capitalize ml-2">
                                     {contract.status}
                                 </Badge>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className={cn(
+                                        "h-6 gap-1 ml-2 transition-colors",
+                                        contract.status === 'active'
+                                            ? "text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10"
+                                            : "text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                    )}
+                                    onClick={handleTogglePause}
+                                    title={contract.status === 'active' ? "Pause Contract" : "Resume Contract"}
+                                >
+                                    {contract.status === 'active' ? <PauseCircle size={16} /> : <Play size={16} />}
+                                    <span className="text-xs">{contract.status === 'active' ? "Pause" : "Resume"}</span>
+                                </Button>
                             </div>
                         )}
                     </div>
