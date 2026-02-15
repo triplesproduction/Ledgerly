@@ -91,19 +91,19 @@ export default function ClientDetailPage() {
                 {/* Left: Client Info */}
                 <div className="space-y-6">
                     <Card className="bg-card border-white/5">
-                        <CardHeader>
+                        <CardHeader className="p-4 pb-0">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <Building size={16} className="text-orange-500" /> Contact Details
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                        <CardContent className="space-y-3 p-4 pt-2">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
                                     <div className="text-sm text-zinc-400">Total Revenue</div>
                                     <div className="text-xl font-bold text-emerald-400">₹{totalValue.toLocaleString()}</div>
                                 </div>
 
-                                <div className="pt-4 space-y-4">
+                                <div className="pt-2 space-y-2">
                                     <div className="flex items-center gap-3 text-sm text-zinc-300">
                                         <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0">
                                             <Mail size={14} className="text-zinc-500" />
@@ -149,7 +149,7 @@ export default function ClientDetailPage() {
                                     <TableHead className="text-zinc-400">Date</TableHead>
                                     <TableHead className="text-zinc-400">Description</TableHead>
                                     <TableHead className="text-zinc-400">Service</TableHead>
-                                    <TableHead className="text-zinc-400">Method</TableHead>
+
                                     <TableHead className="text-zinc-400">Status</TableHead>
                                     <TableHead className="text-zinc-400 text-right">Amount</TableHead>
                                 </TableRow>
@@ -166,9 +166,7 @@ export default function ClientDetailPage() {
                                         <TableCell className="text-zinc-400">
                                             {payment.services?.name || "-"}
                                         </TableCell>
-                                        <TableCell className="text-zinc-400 capitalize">
-                                            {payment.payment_method || "-"}
-                                        </TableCell>
+
                                         <TableCell>
                                             <Badge variant="outline" className={cn(
                                                 "text-[10px] h-5 px-2",
