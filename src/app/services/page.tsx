@@ -43,7 +43,8 @@ export default function ServicesPage() {
         const { data, error } = await supabase
             .from("income")
             .select("service_id, amount, description, date, client_id, clients(name)")
-            .not("service_id", "is", null);
+            .not("service_id", "is", null)
+            .in("status", ["RECEIVED", "PAID"]);
 
         if (!error && data) {
             setRawIncome(data);
