@@ -15,6 +15,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Client } from "@/types/general";
 
@@ -240,9 +241,47 @@ export default function ClientsPage() {
                 case "value-high": return (b.value || 0) - (a.value || 0);
                 case "value-low": return (a.value || 0) - (b.value || 0);
                 case "name-asc": return a.name.localeCompare(b.name);
-                default: return 0;
+                case "name-asc": return a.name.localeCompare(b.name);
+                default:
+                    // Default: Active First, then Newest (created_at desc)
+                    if (a.status === 'Active' && b.status !== 'Active') return -1;
+                    if (a.status !== 'Active' && b.status === 'Active') return 1;
+                    return 0; // Fallback to original order (which is created_at desc from DB)
             }
         });
+
+    // Selection State
+    const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
+
+    const handleSelect = (id: string, checked: boolean) => {
+        const newSelected = new Set(selectedClients);
+        if (checked) {
+            newSelected.add(id);
+        } else {
+            newSelected.delete(id);
+        }
+        setSelectedClients(newSelected);
+    };
+
+    const handleBulkUpdate = async (status: string) => {
+        if (selectedClients.size === 0) return;
+        if (!confirm(`Are you sure you want to set ${selectedClients.size} clients to ${status}?`)) return;
+
+        setIsLoading(true);
+        const ids = Array.from(selectedClients);
+        const { error } = await supabase
+            .from('clients')
+            .update({ status })
+            .in('id', ids);
+
+        if (error) {
+            alert("Error updating clients: " + error.message);
+        } else {
+            setSelectedClients(new Set()); // Clear selection
+            fetchClients(); // Refresh data
+        }
+        setIsLoading(false);
+    };
 
     // Manual Sync Button (re-runs the logic)
     const syncLTV = () => fetchClients();
@@ -339,7 +378,7 @@ export default function ClientsPage() {
             {isLoading ? (
                 <div className="text-zinc-500 text-sm">Loading clients...</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
                     {filteredClients.map((client) => (
                         <ClientCard
                             key={client.id}
@@ -347,6 +386,8 @@ export default function ClientsPage() {
                             onEdit={() => openEditModal(client)}
                             onDelete={() => handleDelete(client.id)}
                             onView={() => router.push(`/clients/${client.id}`)}
+                            isSelected={selectedClients.has(client.id)}
+                            onToggleSelect={(checked) => handleSelect(client.id, checked)}
                         />
                     ))}
                     {filteredClients.length === 0 && (
@@ -354,6 +395,45 @@ export default function ClientsPage() {
                             {searchTerm ? "No clients match your search." : "No clients found."}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* BULK ACTION BAR */}
+            {selectedClients.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#16171D] border border-white/10 shadow-2xl rounded-full px-6 py-3 flex items-center gap-6 animate-in slide-in-from-bottom-6 z-50">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-orange-500 rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-bold text-white">
+                            {selectedClients.size}
+                        </div>
+                        <span className="text-sm font-medium text-white">Selected</span>
+                    </div>
+
+                    <div className="h-4 w-px bg-white/10"></div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-muted-foreground hover:text-white hover:bg-white/5 h-8 px-3 rounded-full text-xs"
+                            onClick={() => setSelectedClients(new Set())}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 h-8 rounded-full text-xs"
+                            onClick={() => handleBulkUpdate('Active')}
+                        >
+                            Mark Active
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="bg-white/5 text-zinc-400 hover:bg-white/10 border border-white/10 h-8 rounded-full text-xs"
+                            onClick={() => handleBulkUpdate('Inactive')}
+                        >
+                            Mark Inactive
+                        </Button>
+                    </div>
                 </div>
             )}
 
@@ -415,7 +495,14 @@ export default function ClientsPage() {
     )
 }
 
-function ClientCard({ client, onEdit, onDelete, onView }: { client: Client, onEdit: (e: any) => void, onDelete: () => void, onView: () => void }) {
+function ClientCard({ client, onEdit, onDelete, onView, isSelected, onToggleSelect }: {
+    client: Client,
+    onEdit: (e: any) => void,
+    onDelete: () => void,
+    onView: () => void,
+    isSelected: boolean,
+    onToggleSelect: (checked: boolean) => void
+}) {
     // 2-Step Deletion State
     const [deleteStep, setDeleteStep] = useState(0);
 
@@ -439,16 +526,31 @@ function ClientCard({ client, onEdit, onDelete, onView }: { client: Client, onEd
     return (
         <Card
             onClick={onView}
-            className="bg-card border-white/5 hover:border-white/10 transition-colors rounded-3xl group relative overflow-hidden cursor-pointer hover:bg-white/5"
+            className={cn(
+                "bg-card border-white/5 transition-all rounded-3xl group relative overflow-hidden cursor-pointer hover:bg-white/5",
+                isSelected ? "border-orange-500/50 bg-orange-500/5" : "hover:border-white/10"
+            )}
         >
             <CardHeader className="flex flex-row items-center justify-between pb-2 pt-6 px-6">
-                <div className="flex flex-col">
-                    <CardTitle className="text-[15px] font-semibold text-foreground group-hover:text-orange-500 transition-colors mb-1">
-                        {client.name}
-                    </CardTitle>
-                    <Badge variant="secondary" className="bg-white/5 text-muted-foreground text-[10px] w-fit border-0">
-                        {client.industry}
-                    </Badge>
+                <div className="flex items-center gap-4">
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={onToggleSelect}
+                            className={cn(
+                                "border-white/20 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500",
+                                !isSelected && "opacity-0 group-hover:opacity-100 transition-opacity"
+                            )}
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <CardTitle className="text-[15px] font-semibold text-foreground group-hover:text-orange-500 transition-colors mb-1">
+                            {client.name}
+                        </CardTitle>
+                        <Badge variant="secondary" className="bg-white/5 text-muted-foreground text-[10px] w-fit border-0">
+                            {client.industry}
+                        </Badge>
+                    </div>
                 </div>
                 <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={(e) => { e.stopPropagation(); onEdit(e); }}>

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, Clock, PauseCircle, CheckCircle, Calendar, StickyNote } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function ReceivablesPage() {
     const [activeTab, setActiveTab] = useState("overdue");
@@ -321,13 +322,29 @@ export default function ReceivablesPage() {
                                         <TableRow key={item.id} className="border-white/5 hover:bg-white/5">
                                             <TableCell className="pl-6">
                                                 <div className="font-semibold text-foreground">{item.clients?.name || item.client}</div>
-                                                <div className="text-xs text-muted-foreground">{item.hold_note || "No notes"}</div>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="text-xs text-muted-foreground truncate max-w-[150px] cursor-help">
+                                                            {item.hold_note || "No notes"}
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="max-w-[400px]">
+                                                        <p className="text-sm break-words whitespace-pre-wrap">{item.hold_note || "No notes provided"}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="font-medium text-foreground truncate max-w-[200px]" title={item.hold_reason}>
-                                                        {item.hold_reason}
-                                                    </span>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span className="font-medium text-foreground truncate max-w-[200px] cursor-help">
+                                                                {item.hold_reason}
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="max-w-[400px]">
+                                                            <p className="text-sm break-words whitespace-pre-wrap">{item.hold_reason}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
                                                     <Badge variant="secondary" className="w-fit text-[10px] bg-white/5 text-zinc-400 border border-white/10 uppercase tracking-wider">
                                                         With: {item.hold_with}
                                                     </Badge>
