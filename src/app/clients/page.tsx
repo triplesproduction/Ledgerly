@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { Client } from "@/types/general";
 
@@ -371,11 +375,10 @@ export default function ClientsPage() {
                         </div>
                         <div className="grid gap-2">
                             <Label>Industry</Label>
-                            <Input
-                                className="bg-white/5 border-white/10"
-                                placeholder="Tech, Retail..."
+                            <IndustryCombobox
                                 value={formData.industry}
-                                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                                onChange={(val) => setFormData({ ...formData, industry: val })}
+                                industries={availableIndustries}
                             />
                         </div>
                         <div className="grid gap-2">
@@ -485,4 +488,77 @@ function ClientCard({ client, onEdit, onDelete, onView }: { client: Client, onEd
             </CardContent>
         </Card>
     )
+}
+
+function IndustryCombobox({ value, onChange, industries }: { value: string, onChange: (val: string) => void, industries: string[] }) {
+    const [open, setOpen] = useState(false);
+    const [searchValue, setSearchValue] = useState("");
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between bg-white/5 border-white/10 text-foreground hover:bg-white/10 hover:text-foreground focus:ring-1 focus:ring-orange-500/50"
+                >
+                    {value
+                        ? value
+                        : "Select industry..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0 bg-[#16171D] border-white/10 text-foreground shadow-xl">
+                <Command className="bg-transparent">
+                    <CommandInput
+                        placeholder="Search industry..."
+                        value={searchValue}
+                        onValueChange={setSearchValue}
+                        className="text-foreground caret-orange-500 selection:bg-orange-500/30"
+                    />
+                    <CommandList>
+                        <CommandEmpty>
+                            <div className="p-2">
+                                <p className="text-sm text-muted-foreground mb-2">No industry found.</p>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full h-8 border-dashed border border-orange-500/30 text-orange-500 hover:bg-orange-500/10 hover:text-orange-400"
+                                    onClick={() => {
+                                        onChange(searchValue); // Set the new value
+                                        setOpen(false);
+                                    }}
+                                >
+                                    <Plus className="mr-2 h-3 w-3" />
+                                    Create "{searchValue}"
+                                </Button>
+                            </div>
+                        </CommandEmpty>
+                        <CommandGroup>
+                            {industries.map((industry) => (
+                                <CommandItem
+                                    key={industry}
+                                    value={industry}
+                                    onSelect={(currentValue) => {
+                                        onChange(industry);
+                                        setOpen(false);
+                                    }}
+                                    className="text-foreground aria-selected:bg-orange-500/10 aria-selected:text-orange-500 cursor-pointer"
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4 text-orange-500",
+                                            value === industry ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {industry}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
 }

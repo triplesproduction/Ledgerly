@@ -161,7 +161,7 @@ export async function generateRetainerInstances() {
     }
 }
 
-function calculateMilestones(total: number, structure: MilestoneConfig[], baseDate: Date) {
+export function calculateMilestones(total: number, structure: MilestoneConfig[], baseDate: Date) {
     // If no structure, default to 100% upfront
     if (!structure || structure.length === 0) {
         return [{

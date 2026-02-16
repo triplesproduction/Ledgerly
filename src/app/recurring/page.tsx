@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, ChevronRight, FileText, Calendar, IndianRupee, Trash2 } from "lucide-react";
+import { Plus, ChevronRight, FileText, Calendar, IndianRupee, Trash2, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -108,15 +108,78 @@ export default function RetainersPage() {
         }
     };
 
-    const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!confirm("Are you sure you want to delete this contract? This will remove all associated versions.")) return;
+    // Delete State
+    const [deleteId, setDeleteId] = useState<string | null>(null);
 
-        const { error } = await supabase.from('retainer_contracts').delete().eq('id', id);
-        if (error) {
-            alert("Error deleting contract: " + error.message);
-        } else {
+    const handleDeleteClick = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setDeleteId(id);
+    };
+
+    const confirmDelete = async (keepEntries: boolean) => {
+        if (!deleteId) return;
+        setIsLoading(true);
+
+        try {
+            // 1. Fetch Hierarchy to identify Income
+            const { data: versions } = await supabase.from('contract_versions').select('id').eq('contract_id', deleteId);
+            const versionIds = versions?.map(v => v.id) || [];
+
+            let instanceIds: string[] = [];
+            if (versionIds.length > 0) {
+                const { data: instances } = await supabase.from('monthly_instances').select('id').in('contract_version_id', versionIds);
+                instanceIds = instances?.map(i => i.id) || [];
+            }
+
+            // 2. Handle Income Entries
+            if (instanceIds.length > 0) {
+                if (keepEntries) {
+                    // Unlink Income (Set retainer_instance_id = NULL)
+                    // They become standalone entries
+                    const { error: incomeError } = await supabase
+                        .from('income')
+                        .update({ retainer_instance_id: null })
+                        .in('retainer_instance_id', instanceIds);
+
+                    if (incomeError) throw incomeError;
+                } else {
+                    // Delete Income
+                    const { error: incomeError } = await supabase
+                        .from('income')
+                        .delete()
+                        .in('retainer_instance_id', instanceIds);
+
+                    if (incomeError) throw incomeError;
+                }
+            }
+
+            // 3. Delete Contract (Cascade should handle versions/instances, but we'll manually cleanup to be safe/explicit or if cascade isn't set)
+            // Assuming Supabase FKs are CASCADE, deleting contract is enough. 
+            // If not, we'd delete instances -> versions -> contract. 
+            // I'll delete the contract and let the DB handle cascade for internal retainer tables if configured, 
+            // but manual cleanup is safer if uncertain. 
+            // Given I don't know the schema validly, I will assume basic cascade OR manual cleanup of children.
+            // Let's rely on standard 'ON DELETE CASCADE' for internal tables if they exist, but explicit delete is safer.
+
+            // Delete Instances
+            if (instanceIds.length > 0) {
+                await supabase.from('monthly_instances').delete().in('id', instanceIds);
+            }
+            // Delete Versions
+            if (versionIds.length > 0) {
+                await supabase.from('contract_versions').delete().in('id', versionIds);
+            }
+            // Delete Contract
+            const { error: delError } = await supabase.from('retainer_contracts').delete().eq('id', deleteId);
+            if (delError) throw delError;
+
+            // Success
+            setDeleteId(null);
             fetchData();
+        } catch (err: any) {
+            alert("Error deleting contract: " + err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -144,7 +207,7 @@ export default function RetainersPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6 text-zinc-600 hover:text-red-400 -mt-1 -mr-1"
-                                onClick={(e) => handleDelete(contract.id, e)}
+                                onClick={(e) => handleDeleteClick(contract.id, e)}
                             >
                                 <Trash2 size={14} />
                             </Button>
@@ -274,6 +337,57 @@ export default function RetainersPage() {
                             </div>
                         </div>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+                <DialogContent className="bg-[#16171D] border-white/10 text-foreground sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-white">Delete Contract</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 text-zinc-400 text-sm space-y-4">
+                        <p>
+                            You are about to delete <span className="text-white font-medium">{contracts.find(c => c.id === deleteId)?.name}</span>.
+                        </p>
+                        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                            <h4 className="text-orange-400 font-medium mb-1 flex items-center gap-2">
+                                <AlertTriangle size={16} /> Data Handling
+                            </h4>
+                            <p className="text-xs text-orange-200/70">
+                                This contract has generated income entries. How would you like to handle them?
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter className="flex-col sm:justify-start gap-2">
+                        <div className="flex flex-col w-full gap-3">
+                            <Button
+                                variant="destructive"
+                                onClick={() => confirmDelete(false)}
+                                className="w-full justify-between"
+                            >
+                                <span>Delete Everything</span>
+                                <span className="text-xs opacity-70 font-normal">Contract + Entries</span>
+                            </Button>
+
+                            <Button
+                                variant="secondary"
+                                onClick={() => confirmDelete(true)}
+                                className="w-full justify-between bg-white/5 hover:bg-white/10 text-white"
+                            >
+                                <span>Delete Contract Only</span>
+                                <span className="text-xs opacity-70 font-normal">Keep Entries</span>
+                            </Button>
+
+                            <Button
+                                variant="ghost"
+                                onClick={() => setDeleteId(null)}
+                                className="w-full mt-2"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
