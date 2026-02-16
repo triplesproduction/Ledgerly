@@ -100,7 +100,7 @@ export function Sidebar() {
                     className="w-full justify-start text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 px-4 h-11 rounded-xl"
                     onClick={handleLogout}
                 >
-                    <LogOut size={20} className="mr-3" />
+                    <LogOut size={20} className="mr-2" />
                     Logout
                 </Button>
             </div>
@@ -118,7 +118,7 @@ function NavItem({ href, icon, label, active = false }: { href: string; icon: Re
                     : "text-zinc-500 border border-transparent hover:bg-[#121217] hover:text-white hover:border-white/5 hover:shadow-[0_0_20px_-5px_rgba(249,115,22,0.15)]"
                     }`}
             >
-                <span className={`mr-3 transition-colors ${active ? "text-white" : "text-zinc-500 group-hover:text-white"}`}>{icon}</span>
+                <span className={`mr-2 transition-colors ${active ? "text-white" : "text-zinc-500 group-hover:text-white"}`}>{icon}</span>
                 {label}
             </Button>
         </Link>
