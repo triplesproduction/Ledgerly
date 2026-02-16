@@ -325,7 +325,9 @@ export default function ReceivablesPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="font-medium text-foreground">{item.hold_reason}</span>
+                                                    <span className="font-medium text-foreground truncate max-w-[200px]" title={item.hold_reason}>
+                                                        {item.hold_reason}
+                                                    </span>
                                                     <Badge variant="secondary" className="w-fit text-[10px] bg-white/5 text-zinc-400 border border-white/10 uppercase tracking-wider">
                                                         With: {item.hold_with}
                                                     </Badge>
