@@ -145,82 +145,114 @@ export default function RetainerDetailPage() {
                 versionId = newVer.id;
             }
 
-            // --- Retroactive Update Logic ---
-            // 1. Find all monthly_instances using this versionId
+            // --- Enhanced Retroactive Update Logic ---
+            // 1. Determine Scope & Find Candidate Instances
             if (versionId) {
-                const { data: affectedInstances } = await supabase
-                    .from("monthly_instances")
+                // Fetch ALL versions to calculate time ranges and identify all instances for this contract
+                const { data: allVersions } = await supabase
+                    .from("contract_versions")
                     .select("*")
-                    .eq("contract_version_id", versionId);
+                    .eq("contract_id", id)
+                    .order("effective_start_date", { ascending: true });
 
-                if (affectedInstances && affectedInstances.length > 0) {
-                    const numericPrice = parseFloat(newPrice);
+                if (allVersions) {
+                    const currentVerIndex = allVersions.findIndex(v => v.id === versionId);
 
-                    for (const instance of affectedInstances) {
-                        // A. Update Instance Total
-                        await supabase
+                    if (currentVerIndex !== -1) {
+                        const currentVer = allVersions[currentVerIndex];
+                        const nextVer = allVersions[currentVerIndex + 1];
+
+                        const startDate = parseISO(currentVer.effective_start_date);
+                        const endDate = nextVer ? parseISO(nextVer.effective_start_date) : null;
+
+                        // Get IDs of all versions for this contract to find ANY instance belonging to it
+                        const allVersionIds = allVersions.map(v => v.id);
+
+                        // Fetch ALL instances for this contract
+                        const { data: candidateInstances } = await supabase
                             .from("monthly_instances")
-                            .update({ total_due: numericPrice })
-                            .eq("id", instance.id);
-
-                        // B. Recalculate intended milestones
-                        const intendedMilestones = calculateMilestones(
-                            numericPrice,
-                            structure,
-                            parseISO(instance.month_date)
-                        );
-
-                        // C. Fetch existing income entries
-                        const { data: existingIncome } = await supabase
-                            .from("income")
                             .select("*")
-                            .eq("retainer_instance_id", instance.id)
-                            .order("created_at", { ascending: true });
+                            .in("contract_version_id", allVersionIds);
 
-                        if (!existingIncome) continue;
+                        if (candidateInstances && candidateInstances.length > 0) {
+                            // Filter instances that fall within this version's effective window
+                            const affectedInstances = candidateInstances.filter(inst => {
+                                const mDate = parseISO(inst.month_date);
+                                // Check if mDate >= startDate (using startOfMonth granularity)
+                                const isAfterStart = !isBefore(startOfMonth(mDate), startOfMonth(startDate));
+                                // Check if mDate < endDate
+                                const isBeforeEnd = !endDate || isBefore(startOfMonth(mDate), startOfMonth(endDate));
 
-                        // D. Sync Income
-                        if (existingIncome.length === intendedMilestones.length) {
-                            // Structure matches -> Update amounts (preserve status/ID)
-                            for (let i = 0; i < existingIncome.length; i++) {
-                                const income = existingIncome[i];
-                                const milestone = intendedMilestones[i];
+                                return isAfterStart && isBeforeEnd;
+                            });
 
-                                await supabase
-                                    .from("income")
-                                    .update({
-                                        amount: milestone.amount,
-                                        description: `${contract?.name} - ${milestone.name}`,
-                                        milestone_label: milestone.name,
-                                        // We purposefully do NOT update date to avoid messing up paid dates,
-                                        // unless it's EXPECTED? For now, keep date as is or maybe update it?
-                                        // Let's update expected dates, but keep paid dates? 
-                                        // Actually, date in income is "Date Received" usually. 
-                                        // But for milestones it's "Due Date". 
-                                        // If status is received, date is valid. If expected, date is projected.
-                                        // Let's only update amount and description to be safe.
-                                    })
-                                    .eq("id", income.id);
+                            if (affectedInstances.length > 0) {
+                                const numericPrice = parseFloat(newPrice);
+
+                                for (const instance of affectedInstances) {
+                                    // A. Update Instance (Reassign Version + Update Total)
+                                    // This "claims" the instance for this version if it was previously on an older one
+                                    await supabase
+                                        .from("monthly_instances")
+                                        .update({
+                                            total_due: numericPrice,
+                                            contract_version_id: versionId
+                                        })
+                                        .eq("id", instance.id);
+
+                                    // B. Recalculate intended milestones
+                                    const intendedMilestones = calculateMilestones(
+                                        numericPrice,
+                                        structure,
+                                        parseISO(instance.month_date)
+                                    );
+
+                                    // C. Fetch existing income entries
+                                    const { data: existingIncome } = await supabase
+                                        .from("income")
+                                        .select("*")
+                                        .eq("retainer_instance_id", instance.id)
+                                        .order("created_at", { ascending: true });
+
+                                    if (!existingIncome) continue;
+
+                                    // D. Sync Income
+                                    if (existingIncome.length === intendedMilestones.length) {
+                                        for (let i = 0; i < existingIncome.length; i++) {
+                                            const income = existingIncome[i];
+                                            const milestone = intendedMilestones[i];
+
+                                            await supabase
+                                                .from("income")
+                                                .update({
+                                                    amount: milestone.amount,
+                                                    description: `${contract?.name} - ${milestone.name}`,
+                                                    milestone_label: milestone.name,
+                                                    // Update date too, to ensure correctness if structure time changed
+                                                    date: milestone.date
+                                                })
+                                                .eq("id", income.id);
+                                        }
+                                    } else {
+                                        // Structure Mismatch -> Delete & Recreate
+                                        await supabase.from("income").delete().eq("retainer_instance_id", instance.id);
+
+                                        const newEntries = intendedMilestones.map(m => ({
+                                            retainer_instance_id: instance.id,
+                                            client_id: contract?.client_id,
+                                            service_id: contract?.service_id,
+                                            amount: m.amount,
+                                            date: m.date,
+                                            description: `${contract?.name} - ${m.name}`,
+                                            category: 'Retainer',
+                                            status: 'EXPECTED',
+                                            milestone_label: m.name
+                                        }));
+
+                                        await supabase.from("income").insert(newEntries);
+                                    }
+                                }
                             }
-                        } else {
-                            // Structure Mismatch -> Delete & Recreate (Destructive but necessary)
-                            // We can try to preserve PAID status if amounts match? Too complex.
-                            // Just Nuke and Recreate is the standard approach for structural changes.
-                            await supabase.from("income").delete().eq("retainer_instance_id", instance.id);
-
-                            const newEntries = intendedMilestones.map(m => ({
-                                retainer_instance_id: instance.id,
-                                client_id: contract?.client_id,
-                                service_id: contract?.service_id,
-                                amount: m.amount,
-                                date: m.date,
-                                description: `${contract?.name} - ${m.name}`,
-                                category: 'Retainer',
-                                status: 'EXPECTED',
-                                milestone_label: m.name
-                            }));
-
-                            await supabase.from("income").insert(newEntries);
                         }
                     }
                 }

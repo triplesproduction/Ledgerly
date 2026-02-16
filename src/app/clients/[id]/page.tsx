@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Mail, Phone, MapPin, Building, Calendar, Wallet } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Building, Calendar, Wallet, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -57,6 +57,23 @@ export default function ClientDetailPage() {
         }
 
         setIsLoading(false);
+    };
+
+    const handleDeletePayment = async (paymentId: string) => {
+        if (!confirm("Are you sure you want to delete this payment record?")) return;
+
+        const { error } = await supabase
+            .from('income')
+            .delete()
+            .eq('id', paymentId);
+
+        if (error) {
+            console.error("Error deleting payment:", error);
+            alert("Failed to delete payment.");
+        } else {
+            // Update local state to remove the deleted payment
+            setPayments(prev => prev.filter(p => p.id !== paymentId));
+        }
     };
 
     if (isLoading) return <div className="p-8 text-white">Loading details...</div>;
@@ -154,6 +171,7 @@ export default function ClientDetailPage() {
 
                                     <TableHead className="text-zinc-400">Status</TableHead>
                                     <TableHead className="text-zinc-400 text-right">Amount</TableHead>
+                                    <TableHead className="w-[50px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -182,11 +200,21 @@ export default function ClientDetailPage() {
                                         <TableCell className="text-right font-mono text-white">
                                             ₹{payment.amount.toLocaleString()}
                                         </TableCell>
+                                        <TableCell>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10"
+                                                onClick={() => handleDeletePayment(payment.id)}
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                                 {payments.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-zinc-500 italic">
+                                        <TableCell colSpan={7} className="text-center py-8 text-zinc-500 italic">
                                             No payment history found.
                                         </TableCell>
                                     </TableRow>
