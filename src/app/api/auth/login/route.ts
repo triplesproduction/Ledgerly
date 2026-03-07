@@ -15,7 +15,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 })
         }
 
-        if (username === adminUsername && password === adminPassword) {
+        if (username?.trim().toLowerCase() === adminUsername.toLowerCase() && password === adminPassword) {
             // Generate JWT
             const secret = new TextEncoder().encode(jwtSecret)
             const token = await new SignJWT({ role: 'admin' })

@@ -21,12 +21,18 @@ export default function LoginPage() {
         setError('')
 
         try {
+            const trimmedUsername = username.trim().toLowerCase()
+            const trimmedPassword = password.trim()
+
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ username, password }),
+                body: JSON.stringify({
+                    username: trimmedUsername,
+                    password: trimmedPassword
+                }),
             })
 
             const data = await res.json()
