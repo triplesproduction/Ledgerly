@@ -23,7 +23,7 @@ export function RevenueTrendsDialog({ open, onOpenChange, dateRange }: RevenueTr
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[800px] p-0 gap-0 outline-none">
+            <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[800px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar p-0 gap-0 outline-none">
                 <DialogHeader className="p-6 pb-2 space-y-1">
                     <DialogTitle className="flex items-center gap-2">
                         <BarChart3 className="text-orange-500" size={20} />

@@ -42,7 +42,7 @@ export function DatePicker({
                         className
                     )}
                 >
-                    <CalendarIcon className="mr-3 h-4 w-4 text-orange-500" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-orange-500" />
                     {date ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
                 </Button>
             </PopoverTrigger>

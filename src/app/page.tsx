@@ -302,7 +302,7 @@ export default function Dashboard() {
       <div className="space-y-6">
 
         {/* --- A. Header with Safe Stats --- */}
-        <header className="flex items-center justify-between">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-[28px] font-semibold tracking-tight text-foreground min-h-[42px]">
               {greeting ? `${greeting}, Founder.` : <span className="opacity-0">Loading...</span>}
@@ -320,7 +320,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto">
             <Button
               variant="outline"
               className="rounded-full border-white/10 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 h-10 px-6"
@@ -332,11 +332,11 @@ export default function Dashboard() {
 
             <Dialog open={isAddTransactionOpen} onOpenChange={setIsAddTransactionOpen}>
               <DialogTrigger asChild>
-                <Button className="rounded-full shadow-lg shadow-orange-500/20 h-10 px-6 text-[13px] font-semibold border-0">
+                <Button className="rounded-full shadow-lg shadow-orange-500/20 h-10 px-6 text-[13px] font-semibold border-0 flex-1 md:flex-none">
                   + Add Transaction
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-[#121214] border border-white/10 text-foreground sm:max-w-[480px] p-0 overflow-hidden shadow-2xl shadow-black/50">
+              <DialogContent className="bg-[#121214] border border-white/10 text-foreground sm:max-w-[480px] w-[95vw] max-h-[90vh] overflow-y-auto p-0 shadow-2xl shadow-black/50 custom-scrollbar">
                 <DialogHeader className="px-6 py-5 border-b border-white/5 bg-[#161619] flex flex-row items-center justify-between">
                   <div>
                     <DialogTitle className="text-[17px] font-bold text-white tracking-tight flex items-center gap-2">
@@ -349,8 +349,8 @@ export default function Dashboard() {
                   </div>
                 </DialogHeader>
 
-                <form onSubmit={handleAddTransaction} className="p-6 space-y-5">
-                  <div className="grid grid-cols-2 gap-5">
+                <form onSubmit={handleAddTransaction} className="p-4 sm:p-6 space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="type" className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Nature</Label>
                       <Select
@@ -360,8 +360,12 @@ export default function Dashboard() {
                           setFormData({ ...formData, type: val, status: newStatus });
                         }}
                       >
-                        <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20">
-                          <SelectValue />
+                        <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20 w-full">
+                          <div className="grid grid-cols-[1fr] text-left">
+                            <span className="truncate">
+                              <SelectValue />
+                            </span>
+                          </div>
                         </SelectTrigger>
                         <SelectContent className="bg-[#16171D] border-white/10 text-white">
                           <SelectItem value="income" className="focus:bg-orange-500/10 focus:text-orange-500">Income Entry</SelectItem>
@@ -403,7 +407,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="category" className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Category</Label>
                       {formData.type === 'income' ? (
@@ -416,8 +420,12 @@ export default function Dashboard() {
                           value={formData.category} // expenses use 'category' string
                           onValueChange={(val) => setFormData({ ...formData, category: val })}
                         >
-                          <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20">
-                            <SelectValue placeholder="Select Category" />
+                          <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20 w-full">
+                            <div className="grid grid-cols-[1fr] text-left">
+                              <span className="truncate">
+                                <SelectValue placeholder="Select Category" />
+                              </span>
+                            </div>
                           </SelectTrigger>
                           <SelectContent className="bg-[#16171D] border-white/10 text-white">
                             {expenseCategories.map((opt: any) => (
@@ -437,15 +445,19 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="method" className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Payment Via</Label>
                       <Select
                         value={formData.paymentMethod}
                         onValueChange={(val) => setFormData({ ...formData, paymentMethod: val })}
                       >
-                        <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20">
-                          <SelectValue />
+                        <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20 w-full">
+                          <div className="grid grid-cols-[1fr] text-left">
+                            <span className="truncate">
+                              <SelectValue />
+                            </span>
+                          </div>
                         </SelectTrigger>
                         <SelectContent className="bg-[#16171D] border-white/10 text-white">
                           {paymentMethods.map((method) => (
@@ -461,10 +473,14 @@ export default function Dashboard() {
                         onValueChange={(val) => setFormData({ ...formData, status: val })}
                       >
                         <SelectTrigger className={cn(
-                          "bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20",
+                          "bg-zinc-900/50 border-white/10 h-11 text-white focus:ring-orange-500/20 w-full",
                           formData.status === 'PENDING' || formData.status === 'UNPAID' ? "text-orange-500/80" : "text-emerald-500/80"
                         )}>
-                          <SelectValue />
+                          <div className="grid grid-cols-[1fr] text-left">
+                            <span className="truncate">
+                              <SelectValue />
+                            </span>
+                          </div>
                         </SelectTrigger>
                         <SelectContent className="bg-[#16171D] border-white/10 text-white">
                           {formData.type === 'income' ? (

@@ -73,7 +73,7 @@ export function PaymentHistoryModal({ open, onOpenChange, employee }: PaymentHis
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#0e0e11] border-white/10 text-foreground sm:max-w-[550px] max-h-[80vh] overflow-y-auto">
+            <DialogContent className="bg-[#0e0e11] border-white/10 text-foreground sm:max-w-[550px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <DialogHeader className="border-b border-white/5 pb-4">
                     <DialogTitle className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold border border-orange-500/20">

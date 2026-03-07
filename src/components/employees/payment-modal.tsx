@@ -106,7 +106,7 @@ export function PaymentModal({ open, onOpenChange, employee, onSuccess }: Paymen
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#121214] border-white/10 text-foreground sm:max-w-[425px]">
+            <DialogContent className="bg-[#121214] border-white/10 text-foreground sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-bold">Process Payment</DialogTitle>
                 </DialogHeader>

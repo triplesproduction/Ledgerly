@@ -539,7 +539,7 @@ export default function RetainerDetailPage() {
 
                                     <div className="flex justify-between items-start mb-2 pr-12">
                                         <div className="text-2xl font-bold text-white">
-                                            ${ver.monthly_price.toLocaleString()}
+                                            ₹{ver.monthly_price.toLocaleString()}
                                             <span className="text-sm text-zinc-500 font-normal ml-1">/mo</span>
                                         </div>
                                         {idx === 0 && <Badge className="bg-orange-500 text-white hover:bg-orange-600">Current</Badge>}
@@ -578,7 +578,7 @@ export default function RetainerDetailPage() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-mono text-white">${inst.total_due.toLocaleString()}</div>
+                                        <div className="font-mono text-white">₹{inst.total_due.toLocaleString()}</div>
                                         <Badge variant="secondary" className="text-[10px] h-5 bg-zinc-800 text-zinc-400">
                                             {inst.status}
                                         </Badge>
@@ -597,7 +597,7 @@ export default function RetainerDetailPage() {
                                                         <div className="text-xs text-zinc-500">{format(new Date(ms.date), "MMM d, yyyy")}</div>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="text-white font-mono">${ms.amount.toLocaleString()}</div>
+                                                        <div className="text-white font-mono">₹{ms.amount.toLocaleString()}</div>
                                                         <Badge className={cn("text-[10px]", ms.status === 'RECEIVED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500')}>
                                                             {ms.status}
                                                         </Badge>

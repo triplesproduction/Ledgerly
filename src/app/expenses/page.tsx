@@ -92,6 +92,7 @@ export default function ExpensesPage() {
         let countQuery = supabase
             .from('expenses')
             .select('*', { count: 'exact', head: true })
+            .eq('status', 'PAID') // STRICTLY PAID ONLY
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -108,6 +109,7 @@ export default function ExpensesPage() {
         let totalQuery = supabase
             .from('expenses')
             .select('amount')
+            .eq('status', 'PAID') // STRICTLY PAID ONLY
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -125,6 +127,7 @@ export default function ExpensesPage() {
         let dataQuery = supabase
             .from('expenses')
             .select('*')
+            .eq('status', 'PAID') // STRICTLY PAID ONLY
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -179,8 +182,8 @@ export default function ExpensesPage() {
     );
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
-            <div className="flex items-center justify-between mb-8">
+        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Expenses</h1>
                     <p className="text-muted-foreground mt-1">Track operational costs and expenses.</p>
@@ -192,13 +195,13 @@ export default function ExpensesPage() {
                 />
             </div>
 
-            <div className="flex items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
+                <div className="flex items-center gap-3 w-full lg:w-auto">
+                    <div className="relative w-full lg:w-auto">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search expenses..."
-                            className="pl-9 bg-white/5 border-none w-64 focus-visible:ring-1 focus-visible:ring-orange-500/20 h-10 rounded-xl"
+                            className="pl-9 bg-white/5 border-none w-full lg:w-64 focus-visible:ring-1 focus-visible:ring-orange-500/20 h-10 rounded-xl"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />

@@ -64,7 +64,7 @@ export function DocumentModal({ open, onOpenChange, employee, onSuccess }: any) 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-[#121214] border-white/10 text-foreground sm:max-w-[500px]">
+            <DialogContent className="bg-[#121214] border-white/10 text-foreground sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <DialogHeader>
                     <DialogTitle>Employee Documents</DialogTitle>
                 </DialogHeader>

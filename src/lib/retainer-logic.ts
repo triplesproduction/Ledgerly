@@ -105,7 +105,7 @@ export async function generateRetainerInstances() {
             // 4. Generate Instance & Milestones
 
             // A. Create Instance
-            const { data: instance, error: instError } = await supabase
+            const { data: instanceData, error: instError } = await supabase
                 .from('monthly_instances')
                 .insert({
                     contract_version_id: validVersion.id,
@@ -113,23 +113,17 @@ export async function generateRetainerInstances() {
                     total_due: validVersion.monthly_price,
                     status: 'generated'
                 })
-                .select()
-                .single();
+                .select();
+
+            const instance = instanceData?.[0];
 
             if (instError || !instance) {
-                console.error("Failed to create instance:", {
+                console.error("Failed to create instance:", JSON.stringify({
                     error: instError,
-                    errorMessage: instError?.message,
-                    errorDetails: instError?.details,
-                    errorHint: instError?.hint,
-                    errorCode: instError?.code,
                     contractId: contract.id,
-                    contractName: contract.name,
                     versionId: validVersion.id,
-                    monthDate: format(monthStart, 'yyyy-MM-dd'),
-                    totalDue: validVersion.monthly_price,
-                    paymentStructure: validVersion.payment_structure
-                });
+                    monthDate: format(monthStart, 'yyyy-MM-dd')
+                }, null, 2));
                 next();
                 continue;
             }

@@ -391,13 +391,13 @@ export default function IncomePage() {
     );
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
-            <div className="flex items-center justify-between mb-8">
+        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Income</h1>
                     <p className="text-muted-foreground mt-1">Manage revenue streams and invoices.</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                     <Button
                         variant="outline"
                         onClick={() => setIsTrendsOpen(true)}
@@ -412,13 +412,13 @@ export default function IncomePage() {
                 </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
+                <div className="flex items-center gap-3 w-full lg:w-auto">
+                    <div className="relative w-full lg:w-auto">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             placeholder="Search income..."
-                            className="pl-9 bg-white/5 border-none w-64 focus-visible:ring-1 focus-visible:ring-orange-500/20 h-10 rounded-xl"
+                            className="pl-9 bg-white/5 border-none w-full lg:w-64 focus-visible:ring-1 focus-visible:ring-orange-500/20 h-10 rounded-xl"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -543,7 +543,7 @@ export default function IncomePage() {
             </div>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none">
+                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                     <DialogHeader className="p-6 pb-2 space-y-1">
                         <DialogTitle>{isEditing ? "Edit Income" : "Add Income"}</DialogTitle>
                     </DialogHeader>
@@ -557,7 +557,7 @@ export default function IncomePage() {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div className="grid gap-2">
                                 <Label>Amount</Label>
                                 <div className="relative">
@@ -622,20 +622,20 @@ export default function IncomePage() {
                         </div>
                     </div>
 
-                    <div className="flex justify-between items-center px-6 py-5 border-t border-white/5 mt-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-5 border-t border-white/5 mt-6 gap-4">
                         {isEditing ? (
                             <Button
                                 variant="ghost"
                                 onClick={() => handleDelete(currentId!)}
-                                className="h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                                className="h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 rounded-xl flex items-center gap-2 transition-colors w-full sm:w-auto justify-center"
                             >
                                 <Trash2 size={18} />
                                 <span className="font-medium">Delete</span>
                             </Button>
                         ) : (
-                            <div></div>
+                            <div className="hidden sm:block"></div>
                         )}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                             <Button
                                 variant="ghost"
                                 onClick={() => setIsModalOpen(false)}

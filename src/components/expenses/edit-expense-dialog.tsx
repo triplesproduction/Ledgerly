@@ -103,12 +103,12 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none">
-                <DialogHeader className="p-6 pb-2 space-y-1">
+            <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <DialogHeader className="p-4 pb-2 space-y-1">
                     <DialogTitle>Edit Expense</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-7 px-6 py-4">
-                    <div className="grid gap-2">
+                    <div className="grid gap-1.5">
                         <Label className="text-muted-foreground text-xs">Category</Label>
                         <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
                             <SelectTrigger className="bg-white/5 border-white/10 h-11 text-white">
@@ -125,8 +125,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="grid gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="grid gap-1.5">
                             <Label>Amount</Label>
                             <div className="relative">
                                 <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -138,7 +138,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                                 />
                             </div>
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid gap-1.5">
                             <Label>Date</Label>
                             <DatePicker
                                 date={formData.date}
@@ -147,8 +147,8 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                             />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid gap-1.5">
                             <Label>Merchant</Label>
                             <Input
                                 className="bg-white/5 border-white/10 h-11 text-white focus-visible:ring-1 focus-visible:ring-orange-500/20"
@@ -157,7 +157,7 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                                 placeholder="E.g. AWS"
                             />
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid gap-1.5">
                             <Label>Payment Method</Label>
                             <Select value={formData.paymentMethod} onValueChange={(val) => setFormData({ ...formData, paymentMethod: val })}>
                                 <SelectTrigger className="bg-white/5 border-white/10 h-11 text-white">
@@ -172,27 +172,27 @@ export function EditExpenseDialog({ open, onOpenChange, expense, categoryOptions
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-between items-center px-6 py-5 border-t border-white/5 mt-6">
+                <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-5 border-t border-white/5 mt-6 gap-4">
                     <Button
                         variant="ghost"
                         onClick={handleDelete}
-                        className="h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 rounded-xl flex items-center gap-2 transition-colors"
+                        className="h-11 text-red-400 hover:text-red-300 hover:bg-red-500/10 px-4 rounded-xl flex items-center gap-2 transition-colors w-full sm:w-auto justify-center"
                     >
                         Delete
                     </Button>
 
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                         <Button
                             variant="ghost"
                             onClick={() => onOpenChange(false)}
-                            className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors"
+                            className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors w-full sm:w-auto justify-center"
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={isSubmitting}
-                            className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                            className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none w-full sm:w-auto"
                         >
                             {isSubmitting ? "Saving..." : "Save Expense"}
                         </Button>

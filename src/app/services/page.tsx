@@ -201,7 +201,7 @@ export default function ServicesPage() {
 
     return (
         <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-[28px] font-semibold tracking-tight text-foreground">Services</h1>
                     <p className="text-muted-foreground mt-1 text-[13px]">Manage your service offerings and pricing models.</p>
@@ -233,7 +233,7 @@ export default function ServicesPage() {
                                 <Plus size={18} className="mr-2" /> Add Service
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[500px]">
+                        <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                             <DialogHeader>
                                 <DialogTitle className="text-foreground">{isEditing ? "Edit Service" : "Add Service Category"}</DialogTitle>
                                 <p className="text-xs text-muted-foreground mt-2">Create a main service category that your business offers (e.g., Graphic Design, Video Production, Social Media Management)</p>

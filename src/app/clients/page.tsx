@@ -288,7 +288,7 @@ export default function ClientsPage() {
 
     return (
         <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-[28px] font-semibold tracking-tight text-foreground">Clients</h1>
                     <p className="text-muted-foreground mt-1 text-[13px]">Manage client relationships and track lifetime value.</p>
@@ -310,7 +310,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-4 mb-6 bg-card p-2 rounded-xl border border-white/5 w-full md:w-auto">
+            <div className="flex flex-col md:flex-row gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20 overflow-x-auto">
                 <div className="relative flex-1 md:w-64">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -438,7 +438,7 @@ export default function ClientsPage() {
             )}
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px]">
+                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                     <DialogHeader>
                         <DialogTitle className="text-foreground">{isEditing ? "Edit Client" : "Add New Client"}</DialogTitle>
                     </DialogHeader>

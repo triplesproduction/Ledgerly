@@ -10,7 +10,7 @@ export default function ForecastPage() {
 
     return (
         <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Financial Forecast</h1>
                     <p className="text-muted-foreground mt-1">Projected cashflow based on recurring contracts and scheduled expenses.</p>

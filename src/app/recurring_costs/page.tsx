@@ -177,7 +177,7 @@ export default function RecurringCostsPage() {
 
     return (
         <div className="min-h-screen bg-transparent text-foreground font-sans p-8">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Recurring Expenses</h1>
                     <p className="text-muted-foreground mt-1 text-[13px]">Manage fixed monthly obligations (Rent, Hosting, salaries).</p>
@@ -195,7 +195,7 @@ export default function RecurringCostsPage() {
                             <Plus size={18} className="mr-2" /> Add Recurring Rule
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[500px]">
+                    <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                         <DialogHeader>
                             <DialogTitle className="text-foreground">{editingId ? "Edit Recurring Expense Rule" : "New Recurring Expense Rule"}</DialogTitle>
                         </DialogHeader>
@@ -322,7 +322,11 @@ export default function RecurringCostsPage() {
                             <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No recurring rules yet.</TableCell></TableRow>
                         ) : (
                             rules.map((rule) => (
-                                <TableRow key={rule.id} className="border-white/5 hover:bg-white/5 group transition-colors">
+                                <TableRow
+                                    key={rule.id}
+                                    className="border-white/5 hover:bg-white/5 group transition-colors cursor-pointer"
+                                    onClick={() => window.location.href = `/recurring_costs/${rule.id}`}
+                                >
                                     <TableCell className="font-semibold text-foreground pl-6 py-4 flex items-center gap-3 text-[13px]">
                                         <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.1)]">
                                             <RefreshCcw size={14} />

@@ -91,16 +91,20 @@ export function AddExpenseDialog({ categoryOptions, paymentMethods, onSuccess }:
                     <Plus size={18} className="mr-2" /> Add Expense
                 </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none">
-                <DialogHeader className="p-6 pb-2 space-y-1">
+            <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <DialogHeader className="p-4 pb-2 space-y-1">
                     <DialogTitle>Record Expense</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-7 px-6 py-4">
-                    <div className="grid gap-2">
+                    <div className="grid gap-1.5">
                         <Label className="text-muted-foreground text-xs">Category</Label>
                         <Select value={formData.category} onValueChange={(val) => setFormData({ ...formData, category: val })}>
-                            <SelectTrigger className="bg-white/5 border-white/10 h-11 text-white">
-                                <SelectValue />
+                            <SelectTrigger className="bg-white/5 border-white/10 h-11 text-white w-full">
+                                <div className="grid grid-cols-[1fr] text-left">
+                                    <span className="truncate">
+                                        <SelectValue />
+                                    </span>
+                                </div>
                             </SelectTrigger>
                             <SelectContent className="bg-card border-white/10 text-white z-[200]">
                                 {categoryOptions.map(opt => (
@@ -109,8 +113,8 @@ export function AddExpenseDialog({ categoryOptions, paymentMethods, onSuccess }:
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div className="grid gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="grid gap-1.5">
                             <Label>Amount</Label>
                             <div className="relative">
                                 <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
@@ -122,7 +126,7 @@ export function AddExpenseDialog({ categoryOptions, paymentMethods, onSuccess }:
                                 />
                             </div>
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid gap-1.5">
                             <Label>Date</Label>
                             <DatePicker
                                 date={formData.date}
@@ -132,8 +136,8 @@ export function AddExpenseDialog({ categoryOptions, paymentMethods, onSuccess }:
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="grid gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid gap-1.5">
                             <Label>Merchant</Label>
                             <Input
                                 className="bg-white/5 border-white/10 h-11 text-white focus-visible:ring-1 focus-visible:ring-orange-500/20"
@@ -142,11 +146,15 @@ export function AddExpenseDialog({ categoryOptions, paymentMethods, onSuccess }:
                                 placeholder="E.g. AWS"
                             />
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid gap-1.5">
                             <Label>Payment Method</Label>
                             <Select value={formData.paymentMethod} onValueChange={(val) => setFormData({ ...formData, paymentMethod: val })}>
-                                <SelectTrigger className="bg-white/5 border-white/10 h-11 text-white">
-                                    <SelectValue />
+                                <SelectTrigger className="bg-white/5 border-white/10 h-11 text-white w-full">
+                                    <div className="grid grid-cols-[1fr] text-left">
+                                        <span className="truncate">
+                                            <SelectValue />
+                                        </span>
+                                    </div>
                                 </SelectTrigger>
                                 <SelectContent className="bg-card border-white/10 text-white z-[200]">
                                     {paymentMethods.map(opt => (
@@ -157,18 +165,18 @@ export function AddExpenseDialog({ categoryOptions, paymentMethods, onSuccess }:
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-end items-center px-6 py-5 border-t border-white/5 mt-6 gap-3">
+                <div className="flex flex-col sm:flex-row justify-end items-center px-6 py-5 border-t border-white/5 mt-6 gap-3">
                     <Button
                         variant="ghost"
                         onClick={() => setOpen(false)}
-                        className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors"
+                        className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors w-full sm:w-auto justify-center"
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleSave}
                         disabled={isSubmitting}
-                        className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                        className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none w-full sm:w-auto"
                     >
                         {isSubmitting ? "Saving..." : "Save Expense"}
                     </Button>

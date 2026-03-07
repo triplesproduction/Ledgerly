@@ -43,7 +43,8 @@ export default function EmployeesPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState("all");
-    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     // Modals
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -216,8 +217,8 @@ export default function EmployeesPage() {
     };
 
     return (
-        <div className="min-h-screen text-foreground p-4 font-sans">
-            <div className="max-w-[1600px] mx-auto space-y-6">
+        <div className="min-h-screen text-foreground p-4 md:p-6 lg:p-8 font-sans">
+            <div className="max-w-[1600px] mx-auto space-y-8">
 
                 {/* Header Section */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-white/5">
@@ -234,7 +235,7 @@ export default function EmployeesPage() {
                     </div>
                     <Button
                         onClick={() => { resetForm(); setIsAddModalOpen(true); }}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-11 px-6 rounded-xl shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-95"
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-11 px-6 rounded-xl shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-95 w-full lg:w-auto"
                     >
                         <Plus className="w-5 h-5 mr-2" />
                         Add Member
@@ -334,7 +335,7 @@ export default function EmployeesPage() {
                 </div>
 
                 {/* Employee Table */}
-                <div className="space-y-2">
+                <div className="space-y-4">
                     {isLoading ? (
                         <div className="text-center py-20">
                             <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-500 border-r-transparent mb-4"></div>
@@ -356,208 +357,255 @@ export default function EmployeesPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                        filteredEmployees.map((employee) => (
-                            <Card
-                                key={employee.id}
-                                className={cn(
-                                    "bg-[#121215] border-white/5 rounded-2xl overflow-hidden transition-all",
-                                    expandedId === employee.id ? "border-orange-500/20 shadow-2xl shadow-orange-500/5" : "hover:border-white/10"
-                                )}
-                            >
-                                {/* Table Row */}
-                                <button
-                                    onClick={() => setExpandedId(expandedId === employee.id ? null : employee.id)}
-                                    className="w-full p-4 flex items-center gap-4 text-left transition-all hover:bg-orange-500/5 group/row"
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {filteredEmployees.map((employee) => (
+                                <Card
+                                    key={employee.id}
+                                    onClick={() => { setSelectedEmployee(employee); setIsDetailModalOpen(true); }}
+                                    className="bg-[#121215] border-white/5 rounded-2xl overflow-hidden transition-all hover:border-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/10 hover:-translate-y-1 cursor-pointer group flex flex-col h-full"
                                 >
-                                    <Avatar className="h-12 w-12 border-2 border-white/10 shadow-xl shrink-0 group-hover/row:border-orange-500/30 transition-all group-hover/row:scale-105">
-                                        <AvatarFallback className="bg-zinc-800 text-white font-bold text-sm group-hover/row:bg-orange-500/20 group-hover/row:text-orange-500 transition-all">
-                                            {employee.name.split(' ').map(n => n[0]).join('')}
-                                        </AvatarFallback>
-                                    </Avatar>
-
-                                    <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                                        <div className="md:col-span-2">
-                                            <h4 className="text-base font-bold text-white truncate mb-0.5 group-hover/row:text-orange-500 transition-colors">{employee.name}</h4>
-                                            <p className="text-xs text-zinc-500 font-medium truncate group-hover/row:text-zinc-400 transition-colors">{employee.role}</p>
-                                        </div>
-
-                                        <div className="hidden md:block">
-                                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mb-0.5">Type</p>
-                                            <Badge className="bg-white/5 text-white border border-white/10 font-bold text-xs group-hover/row:bg-orange-500/10 group-hover/row:text-orange-500 group-hover/row:border-orange-500/20 transition-all">
-                                                {employee.type}
-                                            </Badge>
-                                        </div>
-
-                                        <div className="hidden md:block">
-                                            <p className="text-xs text-zinc-600 font-bold uppercase tracking-widest mb-1">Status</p>
-                                            <Badge className="bg-white/5 text-white border border-white/10 font-bold text-xs group-hover/row:bg-orange-500/10 group-hover/row:text-orange-500 group-hover/row:border-orange-500/20 transition-all">
+                                    <div className="p-6 flex-1">
+                                        <div className="flex items-start justify-between mb-5">
+                                            <Avatar className="h-14 w-14 border-2 border-white/10 shadow-xl shrink-0 group-hover:border-orange-500/30 transition-all">
+                                                <AvatarFallback className="bg-zinc-800 text-white font-bold text-lg group-hover:bg-orange-500/20 group-hover:text-orange-500 transition-all">
+                                                    {employee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <Badge className={cn("border-none font-bold text-[10px]", employee.status === 'Active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-500/10 text-zinc-400')}>
                                                 {employee.status}
                                             </Badge>
                                         </div>
+                                        <div className="min-w-0 mb-4">
+                                            <h4 className="text-lg font-bold text-white truncate group-hover:text-orange-500 transition-colors">{employee.name}</h4>
+                                            <p className="text-sm text-zinc-500 font-medium truncate">{employee.role}</p>
+                                        </div>
 
-                                        <div className="hidden md:block">
-                                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mb-0.5">Monthly</p>
-                                            <p className="text-base font-bold text-white group-hover/row:text-orange-500 transition-colors">₹{(employee.salary / 12).toLocaleString()}</p>
+                                        <div className="space-y-3 mt-auto">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-xs text-zinc-500 font-semibold uppercase tracking-widest">Type</p>
+                                                <Badge className="bg-white/5 text-white border border-white/10 font-bold text-xs group-hover:bg-orange-500/10 group-hover:text-orange-500 group-hover:border-orange-500/20 transition-all">
+                                                    {employee.type}
+                                                </Badge>
+                                            </div>
+                                            <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                                                <p className="text-sm text-zinc-400 font-medium">Monthly Pay</p>
+                                                <p className="text-base font-bold text-white group-hover:text-orange-500 transition-colors">₹{(employee.salary / 12).toLocaleString()}</p>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <div className="shrink-0">
-                                        {expandedId === employee.id ? (
-                                            <ChevronUp className="w-6 h-6 text-orange-500" />
-                                        ) : (
-                                            <ChevronDown className="w-6 h-6 text-zinc-600 group-hover/row:text-orange-500 transition-colors" />
-                                        )}
+                                    <div className="w-full bg-white/5 p-3 flex justify-center items-center border-t border-white/5 text-zinc-500 text-sm font-semibold group-hover:bg-orange-500/10 group-hover:text-orange-500 transition-colors shrink-0">
+                                        View Full Profile <ChevronRight className="w-4 h-4 ml-1" />
                                     </div>
-                                </button>
-
-                                {/* Expanded Detail Panel */}
-                                {expandedId === employee.id && (
-                                    <div className="border-t border-white/5 bg-black/20 p-5 animate-in slide-in-from-top-4 duration-300">
-                                        <Tabs defaultValue="overview" className="w-full">
-                                            <TabsList className="mb-5 bg-white/5 p-1 rounded-xl border border-white/10 h-10">
-                                                <TabsTrigger value="overview" className="px-6 rounded-xl font-bold text-xs uppercase tracking-widest data-[state=active]:bg-orange-500 data-[state=active]:text-white">Overview</TabsTrigger>
-                                                <TabsTrigger value="actions" className="px-6 rounded-xl font-bold text-xs uppercase tracking-widest data-[state=active]:bg-orange-500 data-[state=active]:text-white">Actions</TabsTrigger>
-                                                <TabsTrigger value="history" className="px-6 rounded-xl font-bold text-xs uppercase tracking-widest data-[state=active]:bg-orange-500 data-[state=active]:text-white">History</TabsTrigger>
-                                            </TabsList>
-
-                                            <TabsContent value="overview" className="space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                    <div className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all group cursor-pointer">
-                                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 group-hover:text-orange-500/70 transition-colors">Email</p>
-                                                        <p className="text-xs font-bold text-white truncate group-hover:text-orange-500 transition-colors">{employee.email}</p>
-                                                    </div>
-                                                    <div className="p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all group cursor-pointer">
-                                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70 transition-colors">Tenure</p>
-                                                        <p className="text-2xl font-bold text-white group-hover:text-orange-500 transition-colors">{calculateTenure(employee.joinDate)}</p>
-                                                    </div>
-                                                    <div className="p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all group cursor-pointer">
-                                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70 transition-colors">Total Paid</p>
-                                                        <p className="text-2xl font-bold text-white group-hover:text-orange-500 transition-colors">₹{employee.totalPaid.toLocaleString()}</p>
-                                                    </div>
-                                                    <div className="p-6 bg-white/5 rounded-2xl border border-white/5 hover:border-orange-500/30 hover:bg-orange-500/5 transition-all group cursor-pointer">
-                                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70 transition-colors">Advance</p>
-                                                        <p className="text-2xl font-bold text-white group-hover:text-orange-500 transition-colors">₹{employee.advanceTaken.toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                            </TabsContent>
-
-                                            <TabsContent value="actions" className="space-y-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <Button
-                                                        onClick={() => { setPaymentEmployee(employee); setIsPaymentModalOpen(true); }}
-                                                        className="h-16 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center justify-between px-6 shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-95 hover:shadow-2xl hover:shadow-orange-500/30"
-                                                    >
-                                                        <div className="text-left">
-                                                            <p className="text-[10px] opacity-80 mb-0.5">Execute</p>
-                                                            <p className="text-base font-bold">Process Payment</p>
-                                                        </div>
-                                                        <span className="text-orange-500 text-lg font-semibold">₹</span>
-                                                    </Button>
-
-                                                    <Button
-                                                        onClick={() => handleEdit(employee)}
-                                                        variant="outline"
-                                                        className="h-20 border-white/10 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/30 text-white font-bold rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02]"
-                                                    >
-                                                        <div className="text-left">
-                                                            <p className="text-xs text-zinc-500 mb-1">Modify</p>
-                                                            <p className="text-lg font-bold">Edit Profile</p>
-                                                        </div>
-                                                        <Pencil className="w-6 h-6" />
-                                                    </Button>
-
-                                                    {/* Convert to Full-Time - Only for Interns */}
-                                                    {employee.type.toLowerCase().includes('intern') && (
-                                                        <Button
-                                                            onClick={async () => {
-                                                                const confirm = window.confirm(`Convert ${employee.name} to Full-Time employee?`);
-                                                                if (confirm) {
-                                                                    const { error } = await supabase
-                                                                        .from('employees')
-                                                                        .update({
-                                                                            type: 'Full-Time',
-                                                                            internship_duration: null,
-                                                                            internship_end_date: null
-                                                                        })
-                                                                        .eq('id', employee.id);
-
-                                                                    if (error) {
-                                                                        alert('Error converting employee: ' + error.message);
-                                                                    } else {
-                                                                        fetchEmployees();
-                                                                    }
-                                                                }
-                                                            }}
-                                                            variant="outline"
-                                                            className="h-20 border-green-500/30 bg-green-500/10 hover:bg-green-500/20 hover:border-green-500/50 text-white font-bold rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02]"
-                                                        >
-                                                            <div className="text-left">
-                                                                <p className="text-xs text-green-500 mb-1">Promote</p>
-                                                                <p className="text-lg font-bold">Convert to Full-Time</p>
-                                                            </div>
-                                                            <Award className="w-6 h-6 text-green-500" />
-                                                        </Button>
-                                                    )}
-
-                                                    <Button
-                                                        onClick={() => { setHistoryEmployee(employee); setIsHistoryModalOpen(true); }}
-                                                        variant="outline"
-                                                        className="h-20 border-white/10 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/30 text-white font-bold rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02]"
-                                                    >
-                                                        <div className="text-left">
-                                                            <p className="text-xs text-zinc-500 mb-1">View</p>
-                                                            <p className="text-lg font-bold">Payment Ledger</p>
-                                                        </div>
-                                                        <History className="w-6 h-6" />
-                                                    </Button>
-
-                                                    <Button
-                                                        onClick={() => { setDocEmployee(employee); setIsDocModalOpen(true); }}
-                                                        variant="outline"
-                                                        className="h-20 border-white/10 bg-white/5 hover:bg-orange-500/10 hover:border-orange-500/30 text-white font-bold rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02]"
-                                                    >
-                                                        <div className="text-left">
-                                                            <p className="text-xs text-zinc-500 mb-1">Access</p>
-                                                            <p className="text-lg font-bold">Documents</p>
-                                                        </div>
-                                                        <FileText className="w-6 h-6" />
-                                                    </Button>
-                                                </div>
-
-                                                <Button
-                                                    onClick={() => handleDelete(employee.id)}
-                                                    variant="outline"
-                                                    className="w-full h-16 border-white/10 bg-white/5 hover:bg-red-500/10 hover:border-red-500/30 text-white hover:text-red-500 font-bold rounded-2xl transition-all"
-                                                >
-                                                    <Trash2 className="w-5 h-5 mr-3" />
-                                                    Remove from Roster
-                                                </Button>
-                                            </TabsContent>
-
-                                            <TabsContent value="history">
-                                                <div className="p-12 text-center space-y-4">
-                                                    <History className="w-12 h-12 text-zinc-700 mx-auto" />
-                                                    <p className="text-zinc-500 font-medium">Click below to view complete payment history</p>
-                                                    <Button
-                                                        onClick={() => { setHistoryEmployee(employee); setIsHistoryModalOpen(true); }}
-                                                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold h-12 px-8 rounded-xl"
-                                                    >
-                                                        Open Full Ledger
-                                                    </Button>
-                                                </div>
-                                            </TabsContent>
-                                        </Tabs>
-                                    </div>
-                                )}
-                            </Card>
-                        ))
+                                </Card>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
 
+            {/* Employee Profile Modal */}
+            <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+                <DialogContent className="bg-[#0e0e11] border-white/10 text-foreground sm:max-w-4xl p-0 gap-0 outline-none overflow-hidden flex flex-col w-[95vw] max-h-[90vh]">
+                    {selectedEmployee && (
+                        <>
+                            {/* Profile Header */}
+                            <div className="relative p-6 md:p-10 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent shrink-0">
+                                <button className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-all" onClick={() => setIsDetailModalOpen(false)}>
+                                    <X className="w-5 h-5" />
+                                </button>
+                                <div className="absolute top-6 right-16 flex gap-2">
+                                    <Badge className="bg-white/5 text-white font-bold text-sm border-white/10 backdrop-blur-md">
+                                        {selectedEmployee.status}
+                                    </Badge>
+                                    <Badge className="bg-orange-500/20 text-orange-500 font-bold text-sm border-orange-500/20 backdrop-blur-md">
+                                        {selectedEmployee.type}
+                                    </Badge>
+                                </div>
+                                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mt-4 md:mt-0">
+                                    <Avatar className="h-24 w-24 border-2 border-white/10 shadow-2xl bg-[#121215]">
+                                        <AvatarFallback className="bg-zinc-800 text-white font-bold text-3xl">
+                                            {selectedEmployee.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <h2 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">{selectedEmployee.name}</h2>
+                                        <p className="text-lg text-orange-500 font-semibold mb-3">{selectedEmployee.role}</p>
+                                        <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-400 font-medium">
+                                            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5"><Mail className="w-4 h-4 text-zinc-500" /> {selectedEmployee.email}</span>
+                                            <span className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5"><CalendarIcon className="w-4 h-4 text-zinc-500" /> Joined {format(new Date(selectedEmployee.joinDate), 'MMM yyyy')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Scrollable Content */}
+                            <div className="p-6 md:p-10 overflow-y-auto w-full flex-1 space-y-8 custom-scrollbar">
+
+                                {/* KPI Metrics */}
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="p-6 bg-[#121215] rounded-3xl border border-white/5 hover:border-orange-500/30 transition-all group">
+                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70">Tenure</p>
+                                        <p className="text-3xl font-bold text-white mb-1 group-hover:text-orange-500">{calculateTenure(selectedEmployee.joinDate)}</p>
+                                        <p className="text-xs text-zinc-600 font-medium">Total time at org</p>
+                                    </div>
+                                    <div className="p-6 bg-[#121215] rounded-3xl border border-white/5 hover:border-orange-500/30 transition-all group">
+                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70">Total Paid</p>
+                                        <p className="text-3xl font-bold text-white mb-1 group-hover:text-orange-500">₹{selectedEmployee.totalPaid.toLocaleString()}</p>
+                                        <p className="text-xs text-zinc-600 font-medium">Lifetime earnings</p>
+                                    </div>
+                                    <div className="p-6 bg-[#121215] rounded-3xl border border-white/5 hover:border-orange-500/30 transition-all group">
+                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70">Advance Bal.</p>
+                                        <p className="text-3xl font-bold text-red-500 mb-1 group-hover:text-red-400">₹{selectedEmployee.advanceTaken.toLocaleString()}</p>
+                                        <p className="text-xs text-zinc-600 font-medium">Pending recovery</p>
+                                    </div>
+                                    <div className="p-6 bg-[#121215] rounded-3xl border border-white/5 hover:border-orange-500/30 transition-all group">
+                                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 group-hover:text-orange-500/70">Monthly Eq.</p>
+                                        <p className="text-3xl font-bold text-emerald-500 mb-1 group-hover:text-emerald-400">₹{(selectedEmployee.salary / 12).toLocaleString()}</p>
+                                        <p className="text-xs text-zinc-600 font-medium">Regular payout</p>
+                                    </div>
+                                </div>
+
+                                {/* Internship Module (Conditionally Rendered) */}
+                                {selectedEmployee.type.toLowerCase().includes('intern') && (
+                                    <div className="p-8 bg-gradient-to-br from-orange-500/10 to-transparent rounded-3xl border border-orange-500/20 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                                            <Briefcase className="w-32 h-32 text-orange-500" />
+                                        </div>
+                                        <div className="flex items-center gap-3 mb-6 relative z-10">
+                                            <div className="p-2 bg-orange-500/20 rounded-xl">
+                                                <Award className="w-6 h-6 text-orange-500" />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-white">Internship Track</h3>
+                                        </div>
+                                        <div className="space-y-6 relative z-10">
+                                            <div className="flex justify-between items-end">
+                                                <div>
+                                                    <p className="text-sm font-medium text-orange-500/80 mb-1">Time Completed</p>
+                                                    <p className="text-2xl font-bold text-orange-500">{calculateTenure(selectedEmployee.joinDate)}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-2">Program Type</p>
+                                                    <Badge className="bg-orange-500/20 text-orange-500 border-none font-bold px-3 py-1 text-sm">
+                                                        {selectedEmployee.type.toLowerCase().includes('paid') ? 'Stipend Enabled' : 'Unpaid Program'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <div className="w-full bg-black/40 rounded-full h-4 overflow-hidden border border-orange-500/10 p-0.5">
+                                                <div className="bg-gradient-to-r from-orange-600 to-orange-400 h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(249,115,22,0.6)]" style={{ width: '60%' }}></div>
+                                            </div>
+                                            <p className="text-xs text-zinc-400 italic text-center">Internship progress is an estimation based on the start date.</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Quick Actions */}
+                                <div>
+                                    <h3 className="text-xl font-bold text-white mb-5 flex items-center gap-2"><Briefcase className="w-5 h-5 text-zinc-500" /> Administrative Actions</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <Button
+                                            onClick={() => { setIsDetailModalOpen(false); setPaymentEmployee(selectedEmployee); setIsPaymentModalOpen(true); }}
+                                            className="h-20 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-2xl flex items-center justify-between px-8 shadow-xl shadow-orange-500/20 transition-all hover:scale-[1.02] border border-orange-400/20"
+                                        >
+                                            <div className="text-left">
+                                                <p className="text-[11px] uppercase tracking-widest text-orange-100/70 mb-1 font-bold">Execute</p>
+                                                <p className="text-lg font-bold drop-shadow-sm">Process Payment</p>
+                                            </div>
+                                            <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                                                <span className="text-white text-xl font-bold flex items-center justify-center">₹</span>
+                                            </div>
+                                        </Button>
+
+                                        <Button
+                                            onClick={() => { setIsDetailModalOpen(false); handleEdit(selectedEmployee); }}
+                                            variant="outline"
+                                            className="h-20 border-white/10 bg-[#121215] hover:bg-orange-500/10 hover:border-orange-500/30 text-white font-bold rounded-2xl flex items-center justify-between px-8 transition-all hover:scale-[1.02]"
+                                        >
+                                            <div className="text-left">
+                                                <p className="text-[11px] uppercase tracking-widest text-zinc-500 mb-1 font-bold">Modify</p>
+                                                <p className="text-lg font-bold">Edit Profile</p>
+                                            </div>
+                                            <div className="bg-white/5 p-2 rounded-xl text-zinc-400">
+                                                <Pencil className="w-5 h-5" />
+                                            </div>
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Secondary Actions Grid */}
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-white/5">
+                                    <Button
+                                        onClick={() => { setIsDetailModalOpen(false); setHistoryEmployee(selectedEmployee); setIsHistoryModalOpen(true); }}
+                                        variant="outline"
+                                        className="h-24 flex flex-col items-center justify-center border-white/10 bg-[#121215] hover:bg-white/10 text-white rounded-2xl gap-3 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-white/5 group"
+                                    >
+                                        <History className="w-7 h-7 text-zinc-500 group-hover:text-white transition-colors" />
+                                        <span className="text-sm font-bold">Payment Ledger</span>
+                                    </Button>
+
+                                    <Button
+                                        onClick={() => { setIsDetailModalOpen(false); setDocEmployee(selectedEmployee); setIsDocModalOpen(true); }}
+                                        variant="outline"
+                                        className="h-24 flex flex-col items-center justify-center border-white/10 bg-[#121215] hover:bg-white/10 text-white rounded-2xl gap-3 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-white/5 group"
+                                    >
+                                        <FileText className="w-7 h-7 text-zinc-500 group-hover:text-white transition-colors" />
+                                        <span className="text-sm font-bold">Documents</span>
+                                    </Button>
+
+                                    {selectedEmployee.type.toLowerCase().includes('intern') && (
+                                        <Button
+                                            onClick={async () => {
+                                                const confirm = window.confirm(`Convert ${selectedEmployee.name} to Full-Time employee?`);
+                                                if (confirm) {
+                                                    const { error } = await supabase
+                                                        .from('employees')
+                                                        .update({
+                                                            type: 'Full-Time',
+                                                            internship_duration: null,
+                                                            internship_end_date: null
+                                                        })
+                                                        .eq('id', selectedEmployee.id);
+                                                    if (error) {
+                                                        alert('Error converting employee: ' + error.message);
+                                                    } else {
+                                                        setIsDetailModalOpen(false);
+                                                        fetchEmployees();
+                                                    }
+                                                }
+                                            }}
+                                            variant="outline"
+                                            className="h-24 flex flex-col items-center justify-center border-green-500/30 bg-green-500/5 hover:bg-green-500/20 text-green-500 rounded-2xl gap-3 col-span-2 md:col-span-1 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-green-500/10 group"
+                                        >
+                                            <Award className="w-7 h-7 text-green-500/70 group-hover:text-green-400 transition-colors" />
+                                            <span className="text-sm font-bold text-center">Promote to<br />Full-Time</span>
+                                        </Button>
+                                    )}
+
+                                    <Button
+                                        onClick={() => {
+                                            if (window.confirm(`Remove ${selectedEmployee.name} permanently?`)) {
+                                                setIsDetailModalOpen(false);
+                                                handleDelete(selectedEmployee.id);
+                                            }
+                                        }}
+                                        variant="outline"
+                                        className={cn(
+                                            "h-24 flex flex-col items-center justify-center border-red-500/30 bg-red-500/5 hover:bg-red-500/20 text-red-500 rounded-2xl gap-3 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-red-500/10 group",
+                                            !selectedEmployee.type.toLowerCase().includes('intern') && "col-span-2 lg:col-span-2"
+                                        )}
+                                    >
+                                        <Trash2 className="w-7 h-7 text-red-500/70 group-hover:text-red-400 transition-colors" />
+                                        <span className="text-sm font-bold">Remove</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {/* Add/Edit Modal */}
             <Dialog open={isAddModalOpen} onOpenChange={(open) => { setIsAddModalOpen(open); if (!open) resetForm(); }}>
-                <DialogContent className="bg-[#0e0e11] border-white/10 text-foreground sm:max-w-[520px] p-0 gap-0 outline-none">
+                <DialogContent className="bg-[#0e0e11] border-white/10 text-foreground sm:max-w-[520px] p-0 gap-0 outline-none w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
                     <DialogHeader className="p-6 pb-3 space-y-1">
                         <DialogTitle className="text-2xl font-bold text-white">
                             {isEditing ? "Edit Team Member" : "Add New Member"}
@@ -569,7 +617,7 @@ export default function EmployeesPage() {
                     <form onSubmit={handleAddEmployee} className="px-6 py-2">
                         <div className="grid gap-5">
                             {/* Name & Email */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label className="text-muted-foreground text-xs font-semibold">Full Name</Label>
                                     <Input
@@ -594,7 +642,7 @@ export default function EmployeesPage() {
                             </div>
 
                             {/* Role & Type */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label className="text-muted-foreground text-xs font-semibold">Role</Label>
                                     <Input
@@ -623,7 +671,7 @@ export default function EmployeesPage() {
                             </div>
 
                             {/* Salary & Join Date */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label className="text-muted-foreground text-xs font-semibold">{isIntern ? "Monthly Stipend" : "Annual Salary"}</Label>
                                     <div className="relative">
@@ -651,7 +699,7 @@ export default function EmployeesPage() {
 
                             {/* Internship Duration - Only for Interns */}
                             {isIntern && (
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="grid gap-2">
                                         <Label className="text-muted-foreground text-xs font-semibold">Internship Duration (Months)</Label>
                                         <Input
@@ -679,18 +727,18 @@ export default function EmployeesPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="flex justify-end items-center py-5 border-t border-white/5 mt-6 gap-3">
+                        <div className="flex flex-col sm:flex-row justify-end items-center py-5 border-t border-white/5 mt-6 gap-3">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 onClick={() => setIsAddModalOpen(false)}
-                                className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors"
+                                className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors w-full sm:w-auto"
                             >
                                 Cancel
                             </Button>
                             <Button
                                 type="submit"
-                                className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
                             >
                                 {isEditing ? "Save Changes" : "Add Member"}
                             </Button>
