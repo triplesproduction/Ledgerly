@@ -25,3 +25,31 @@ export interface Income {
     retainer_instance_id?: string;
     milestone_label?: string;
 }
+
+export interface Campaign {
+    id: string;
+    name: string;
+    client?: string;
+    budget: number;
+    budget_travel?: number;
+    budget_accommodation?: number;
+    budget_food?: number;
+    budget_ad_spend?: number;
+    start_date: string;
+    end_date: string;
+    status: 'Active' | 'Completed' | string;
+    created_at?: string;
+}
+
+export type CampaignExpenseCategory = 'Travel' | 'Accommodation' | 'Food' | 'Ad Spend';
+
+export interface CampaignExpense {
+    id: string;
+    campaign_id: string;
+    date: string;
+    category: CampaignExpenseCategory;
+    description: string;
+    amount: number;
+    payment_method?: 'Online' | 'Cash';
+    created_at?: string;
+}

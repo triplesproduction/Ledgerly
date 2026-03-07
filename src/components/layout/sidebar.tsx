@@ -15,7 +15,8 @@ import {
     UserCircle,
     Clock,
     TrendingUp,
-    X
+    X,
+    Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -97,6 +98,8 @@ export function Sidebar({ isOpen = false, onClose }: { isOpen?: boolean; onClose
                         <NavItem href="/services" icon={<Briefcase size={20} />} label="Services" active={isActive("/services")} onClick={onClose} />
                         <NavItem href="/income" icon={<Wallet size={20} />} label="Income" active={isActive("/income")} onClick={onClose} />
                         <NavItem href="/expenses" icon={<CreditCard size={20} />} label="Expenses" active={isActive("/expenses")} onClick={onClose} />
+                        <NavItem href="/office-expenses" icon={<Building2 size={20} />} label="Office Expenses" active={isActive("/office-expenses")} onClick={onClose} />
+                        <NavItem href="/campaigns" icon={<TrendingUp size={20} />} label="Campaign Expenses" active={isActive("/campaigns") || pathname?.startsWith("/campaigns")} onClick={onClose} />
                         <NavItem href="/recurring" icon={<RefreshCcw size={20} />} label="Recurring Income" active={isActive("/recurring")} onClick={onClose} />
                         <NavItem href="/recurring_costs" icon={<RefreshCcw size={20} />} label="Recurring Expenses" active={isActive("/recurring_costs")} onClick={onClose} />
                         <NavItem href="/receivables" icon={<Clock size={20} />} label="Receivables" active={isActive("/receivables")} onClick={onClose} />

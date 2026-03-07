@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, isBefore, setDate as setDayOfMonth, parseISO } from "date-fns";
 import { generateExpenseInstances } from "@/lib/recurring-expenses-logic";
 import { cn } from "@/lib/utils";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -24,6 +24,7 @@ type RecurringRule = {
     start_month: string;
     active: boolean;
     due_day: number;
+    auto_pay: boolean;
 };
 
 export default function RecurringCostsPage() {
@@ -39,17 +40,51 @@ export default function RecurringCostsPage() {
         amount: "",
         category: "Software",
         start_month: new Date(),
-        due_day: "1"
+        due_day: "1",
+        auto_pay: false
     });
 
     const fetchRules = async () => {
         setIsLoading(true);
-        const { data, error } = await supabase
+        const { data: rulesData, error } = await supabase
             .from('recurring_expense_rules')
-            .select('*')
-            .order('amount', { ascending: false });
+            .select('*');
 
-        if (data) setRules(data);
+        if (!rulesData) {
+            setIsLoading(false);
+            return;
+        }
+
+        const { data: versionsData } = await supabase
+            .from('recurring_expense_versions')
+            .select('*');
+
+        const now = new Date();
+        const displayRules = rulesData.map(rule => {
+            let activeAmount = rule.amount;
+            if (versionsData) {
+                const ruleVersions = versionsData
+                    .filter((v: any) => v.recurring_rule_id === rule.id)
+                    .sort((a: any, b: any) => new Date(a.effective_from).getTime() - new Date(b.effective_from).getTime());
+
+                const activeVer = ruleVersions.slice().reverse().find((v: any) => parseISO(v.effective_from) <= now || !parseISO(v.effective_from).getTime());
+                if (activeVer) activeAmount = activeVer.amount;
+            }
+            return {
+                ...rule,
+                amount: activeAmount
+            };
+        });
+
+        // Sort by active status first, then by amount descending
+        displayRules.sort((a, b) => {
+            if (a.active === b.active) {
+                return Number(b.amount) - Number(a.amount);
+            }
+            return a.active ? -1 : 1;
+        });
+
+        setRules(displayRules);
         setIsLoading(false);
     };
 
@@ -71,6 +106,7 @@ export default function RecurringCostsPage() {
                         category: formData.category,
                         start_month: format(formData.start_month, 'yyyy-MM-dd'),
                         due_day: parseInt(formData.due_day),
+                        auto_pay: formData.auto_pay
                     })
                     .eq('id', editingId);
 
@@ -92,8 +128,8 @@ export default function RecurringCostsPage() {
                 if (syncError) console.error("Failed to sync scheduled expenses:", syncError);
 
             } else {
-                // Create
-                const { error } = await supabase
+                // Create Rule
+                const { data: insertedRule, error } = await supabase
                     .from('recurring_expense_rules')
                     .insert({
                         name: formData.name,
@@ -103,10 +139,61 @@ export default function RecurringCostsPage() {
                         start_month: format(formData.start_month, 'yyyy-MM-dd'),
                         due_day: parseInt(formData.due_day),
                         active: true,
-                        frequency: 'monthly'
-                    });
+                        frequency: 'monthly',
+                        auto_pay: formData.auto_pay
+                    })
+                    .select()
+                    .single();
 
                 if (error) throw error;
+
+                // Create Initial Pricing Version
+                await supabase.from('recurring_expense_versions').insert({
+                    recurring_rule_id: insertedRule.id,
+                    amount: parseFloat(formData.amount),
+                    effective_from: format(formData.start_month, 'yyyy-MM-dd')
+                });
+
+                // Backfill historical months if start_month is in the past
+                const startMonth = startOfMonth(formData.start_month);
+                const currentMonth = startOfMonth(new Date());
+
+                if (isBefore(startMonth, currentMonth)) {
+                    const dueDay = parseInt(formData.due_day);
+                    const amount = parseFloat(formData.amount);
+                    let cursor = startMonth;
+
+                    while (isBefore(cursor, currentMonth)) {
+                        const monthStr = format(cursor, 'yyyy-MM-dd');
+                        const monthEnd = format(endOfMonth(cursor), 'yyyy-MM-dd');
+
+                        const { count } = await supabase
+                            .from('expenses')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('recurring_rule_id', insertedRule.id)
+                            .gte('date', monthStr)
+                            .lte('date', monthEnd);
+
+                        if (!count || count === 0) {
+                            const daysInMonth = endOfMonth(cursor).getDate();
+                            const clampedDay = Math.min(dueDay, daysInMonth);
+                            const dueDate = format(setDayOfMonth(cursor, clampedDay), 'yyyy-MM-dd');
+
+                            await supabase.from('expenses').insert({
+                                recurring_rule_id: insertedRule.id,
+                                date: dueDate,
+                                amount,
+                                description: `${formData.name} (Recurring)`,
+                                vendor: formData.vendor || formData.name,
+                                category: formData.category,
+                                status: 'PAID',
+                                paid_date: format(new Date(), 'yyyy-MM-dd')
+                            });
+                        }
+
+                        cursor = addMonths(cursor, 1);
+                    }
+                }
             }
 
             setIsAddModalOpen(false);
@@ -129,7 +216,8 @@ export default function RecurringCostsPage() {
             amount: "",
             category: "Software",
             start_month: new Date(),
-            due_day: "1"
+            due_day: "1",
+            auto_pay: false
         });
     };
 
@@ -141,14 +229,29 @@ export default function RecurringCostsPage() {
             amount: rule.amount.toString(),
             category: rule.category,
             start_month: new Date(rule.start_month),
-            due_day: rule.due_day.toString()
+            due_day: rule.due_day.toString(),
+            auto_pay: rule.auto_pay
         });
         setIsAddModalOpen(true);
     };
 
     const toggleStatus = async (id: string, currentStatus: boolean) => {
-        const { error } = await supabase.from('recurring_expense_rules').update({ active: !currentStatus }).eq('id', id);
-        if (!error) fetchRules();
+        const newStatus = !currentStatus;
+        const { error } = await supabase.from('recurring_expense_rules').update({ active: newStatus }).eq('id', id);
+        if (!error) {
+            if (!newStatus) {
+                // Changing to paused: Wipe out SCHEDULED items
+                await supabase
+                    .from('expenses')
+                    .delete()
+                    .eq('recurring_rule_id', id)
+                    .eq('status', 'SCHEDULED');
+            } else {
+                // Changing to active: Regenerate
+                await generateExpenseInstances();
+            }
+            fetchRules();
+        }
     };
 
     const handleDeleteRule = async (id: string) => {
@@ -179,7 +282,14 @@ export default function RecurringCostsPage() {
         <div className="min-h-screen bg-transparent text-foreground font-sans p-8">
             <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Recurring Expenses</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                        Recurring Expenses
+                        {!isLoading && (
+                            <Badge className="bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 border-orange-500/20 text-sm px-3 py-1 font-mono">
+                                Payable: ₹{rules.filter(r => r.active).reduce((sum, r) => sum + Number(r.amount), 0).toLocaleString()}<span className="text-xs text-orange-500/70 ml-1 font-sans font-medium">/mo</span>
+                            </Badge>
+                        )}
+                    </h1>
                     <p className="text-muted-foreground mt-1 text-[13px]">Manage fixed monthly obligations (Rent, Hosting, salaries).</p>
                 </div>
 
@@ -268,6 +378,18 @@ export default function RecurringCostsPage() {
                                 </div>
                             </div>
 
+                            <div className="space-y-2 pb-2">
+                                <Label>Payment Method</Label>
+                                <select
+                                    className="w-full flex h-10 items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20"
+                                    value={formData.auto_pay ? "true" : "false"}
+                                    onChange={(e) => setFormData({ ...formData, auto_pay: e.target.value === "true" })}
+                                >
+                                    <option value="false" className="bg-[#111] text-white">Manual Pay (You log it when paid)</option>
+                                    <option value="true" className="bg-[#111] text-white">Auto Pay (Automatically marked paid)</option>
+                                </select>
+                            </div>
+
                             <div className={cn("flex items-center px-6 py-4 border-t border-white/5", editingId ? "justify-between" : "justify-center")}>
                                 <div>
                                     {editingId && (
@@ -332,12 +454,19 @@ export default function RecurringCostsPage() {
                                             <RefreshCcw size={14} />
                                         </div>
                                         <div>
-                                            {rule.name}
+                                            <div className="flex items-center gap-2">
+                                                {rule.name}
+                                                {rule.auto_pay && (
+                                                    <Badge variant="outline" className="h-4 px-1 text-[9px] font-bold uppercase tracking-wider text-blue-400 border-blue-400/20 bg-blue-500/10">
+                                                        Auto Pay
+                                                    </Badge>
+                                                )}
+                                            </div>
                                             <div className="text-[10px] text-zinc-500 font-normal">{rule.vendor}</div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="font-mono font-medium text-foreground text-[13px]">
-                                        ₹{rule.amount.toLocaleString()}
+                                        ₹{Number(rule.amount).toLocaleString()}
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className="border-white/10 text-zinc-400 font-normal text-[10px] bg-white/5">

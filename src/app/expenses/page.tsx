@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Fragment as Blank, Suspense } from "react";
+import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +24,7 @@ type ExpenseItem = {
     payment_method: string;
     vendor: string;
     status: string;
+    expense_type?: string;
 };
 
 export default function ExpensesPage() {
@@ -38,6 +40,8 @@ export default function ExpensesPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [monthlyTotal, setMonthlyTotal] = useState(0); // Kept for future use if needed
     const ITEMS_PER_PAGE = 15;
+
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -153,7 +157,8 @@ export default function ExpensesPage() {
                 payment_method: item.payment_method,
                 vendor: item.vendor || item.description || "Unknown",
                 service: item.service || "Expense",
-                status: item.status || "PAID"
+                status: item.status || "PAID",
+                expense_type: item.expense_type
             }));
             setExpensesData(formatted);
         }
@@ -172,7 +177,7 @@ export default function ExpensesPage() {
         return () => {
             supabase.removeChannel(subscription);
         };
-    }, [page, searchTerm]);
+    }, [page, searchTerm, searchParams]);
 
 
     // Filter
@@ -262,13 +267,20 @@ export default function ExpensesPage() {
                                     {items.map((item: any) => (
                                         <TableRow key={item.id} className="border-white/5 hover:bg-white/5 group transition-colors">
                                             <TableCell className="font-medium text-foreground/80 pl-6">{format(new Date(item.date), "MMM dd")}</TableCell>
-                                            <TableCell className="font-semibold text-foreground">{item.vendor}</TableCell>
+                                            <TableCell className="font-semibold text-foreground">
+                                                <div className="flex flex-col gap-1">
+                                                    <span>{item.vendor}</span>
+                                                    {item.expense_type === 'office' && (
+                                                        <span className="text-[10px] text-orange-500/80 font-medium">Expense Type: Office</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
                                             <TableCell><CategoryPill category={item.category} /></TableCell>
                                             <TableCell className="text-right">
                                                 <span className={`text-[10px] font-bold ${item.status === 'PAID' ? 'text-emerald-500' : 'text-amber-500'}`}>{item.status}</span>
                                             </TableCell>
                                             <TableCell className="text-right font-bold text-foreground">
-                                                ₹{item.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                                ₹{Number(item.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end gap-1">

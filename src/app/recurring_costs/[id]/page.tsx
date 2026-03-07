@@ -7,7 +7,7 @@ import { ArrowLeft, Clock, History, Trash, PlayCircle, PauseCircle, Pencil, Indi
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addMonths, startOfMonth, endOfMonth, setDate, isBefore, isAfter } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,9 @@ export default function RecurringRuleDetail() {
         name: "",
         vendor: "",
         category: "",
-        due_day: "1"
+        due_day: "1",
+        start_month: "",
+        auto_pay: false
     });
 
     // New Version State
@@ -42,6 +44,14 @@ export default function RecurringRuleDetail() {
     // Name Edit State
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState("");
+
+    // Custom Entry State
+    const [isCustomEntryModalOpen, setIsCustomEntryModalOpen] = useState(false);
+    const [customEntryData, setCustomEntryData] = useState({
+        date: new Date(),
+        amount: "",
+        status: "PAID"
+    });
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -87,12 +97,28 @@ export default function RecurringRuleDetail() {
     }, [id]);
 
     const toggleStatus = async () => {
+        const newStatus = !rule.active;
         const { error } = await supabase
             .from('recurring_expense_rules')
-            .update({ active: !rule.active })
+            .update({ active: newStatus })
             .eq('id', id);
 
-        if (!error) setRule({ ...rule, active: !rule.active });
+        if (!error) {
+            if (!newStatus) {
+                // Changing to paused: Wipe out SCHEDULED items
+                await supabase
+                    .from('expenses')
+                    .delete()
+                    .eq('recurring_rule_id', id)
+                    .eq('status', 'SCHEDULED');
+            } else {
+                // Changing to active: Regenerate
+                await generateExpenseInstances();
+            }
+
+            setRule({ ...rule, active: newStatus });
+            fetchData();
+        }
     };
 
     const handleDelete = async () => {
@@ -140,7 +166,9 @@ export default function RecurringRuleDetail() {
             name: rule.name,
             vendor: rule.vendor,
             category: rule.category,
-            due_day: rule.due_day.toString()
+            due_day: rule.due_day.toString(),
+            start_month: rule.start_month, // e.g. "2026-01-01"
+            auto_pay: rule.auto_pay
         });
         setIsEditModalOpen(true);
     };
@@ -148,6 +176,10 @@ export default function RecurringRuleDetail() {
     const handleUpdateRule = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const oldStartMonth = rule.start_month; // e.g. "2026-01-01"
+            const newStartMonth = formData.start_month;
+
+            // 1. Update rule in DB
             const { error } = await supabase
                 .from('recurring_expense_rules')
                 .update({
@@ -155,13 +187,15 @@ export default function RecurringRuleDetail() {
                     vendor: formData.vendor || formData.name,
                     category: formData.category,
                     due_day: parseInt(formData.due_day),
+                    start_month: newStartMonth,
+                    auto_pay: formData.auto_pay
                 })
                 .eq('id', id);
 
             if (error) throw error;
 
-            // SYNC FUTURE EXPENSES
-            const { error: syncError } = await supabase
+            // 2. Sync metadata on SCHEDULED future expenses
+            await supabase
                 .from('expenses')
                 .update({
                     vendor: formData.vendor || formData.name,
@@ -171,7 +205,74 @@ export default function RecurringRuleDetail() {
                 .eq('recurring_rule_id', id)
                 .eq('status', 'SCHEDULED');
 
-            if (syncError) console.error("Failed to sync scheduled expenses:", syncError);
+            // 3. Handle start_month change
+            if (newStartMonth && oldStartMonth && newStartMonth !== oldStartMonth) {
+                const oldStart = startOfMonth(parseISO(oldStartMonth));
+                const newStart = startOfMonth(parseISO(newStartMonth));
+                const dueDay = parseInt(formData.due_day);
+
+                if (isBefore(newStart, oldStart)) {
+                    // START DATE MOVED BACK → backfill missing months from newStart up to (but not including) oldStart
+                    // Fetch current versions for amount lookup
+                    const { data: vData } = await supabase
+                        .from('recurring_expense_versions')
+                        .select('*')
+                        .eq('recurring_rule_id', id)
+                        .order('effective_from', { ascending: true });
+
+                    const fallbackAmount = rule.amount;
+                    let cursor = newStart;
+
+                    while (isBefore(cursor, oldStart)) {
+                        const monthStr = format(cursor, 'yyyy-MM-dd');
+                        const monthEnd = format(endOfMonth(cursor), 'yyyy-MM-dd');
+
+                        // Idempotency: skip if already exists
+                        const { count } = await supabase
+                            .from('expenses')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('recurring_rule_id', id)
+                            .gte('date', monthStr)
+                            .lte('date', monthEnd);
+
+                        if (!count || count === 0) {
+                            // Find the version effective for this month
+                            let amount = fallbackAmount;
+                            if (vData && vData.length > 0) {
+                                const activeVer = vData.slice().reverse().find((v: any) =>
+                                    !isAfter(startOfMonth(parseISO(v.effective_from)), cursor)
+                                );
+                                if (activeVer) amount = activeVer.amount;
+                            }
+
+                            const daysInMonth = endOfMonth(cursor).getDate();
+                            const clampedDay = Math.min(dueDay, daysInMonth);
+                            const dueDate = format(setDate(cursor, clampedDay), 'yyyy-MM-dd');
+
+                            await supabase.from('expenses').insert({
+                                recurring_rule_id: id,
+                                date: dueDate,
+                                amount,
+                                description: `${formData.name} (Recurring)`,
+                                vendor: formData.vendor || formData.name,
+                                category: formData.category,
+                                status: 'PAID' // Historical entries default to PAID
+                            });
+                        }
+
+                        cursor = addMonths(cursor, 1);
+                    }
+
+                } else if (isAfter(newStart, oldStart)) {
+                    // START DATE MOVED FORWARD → delete entries before the new start
+                    const newStartStr = format(newStart, 'yyyy-MM-dd');
+                    await supabase
+                        .from('expenses')
+                        .delete()
+                        .eq('recurring_rule_id', id)
+                        .lt('date', newStartStr);
+                }
+            }
 
             setIsEditModalOpen(false);
             fetchData();
@@ -191,7 +292,16 @@ export default function RecurringRuleDetail() {
 
             if (error) throw error;
 
-            // Trigger regeneration to update future expenses with new price
+            // Delete already generated SCHEDULED expenses from effective date onward
+            // so they get regenerated with the new price
+            await supabase
+                .from('expenses')
+                .delete()
+                .eq('recurring_rule_id', id)
+                .eq('status', 'SCHEDULED')
+                .gte('date', effectiveDate);
+
+            // Trigger regeneration to recreate them with new price
             await generateExpenseInstances();
 
             setIsNewVerOpen(false);
@@ -208,8 +318,40 @@ export default function RecurringRuleDetail() {
         if (!confirm("Delete this price version?")) return;
         const { error } = await supabase.from('recurring_expense_versions').delete().eq('id', versionId);
         if (!error) {
+            // Delete ALL SCHEDULED expenses so they are forced to regenerate 
+            // after the version is removed
+            await supabase
+                .from('expenses')
+                .delete()
+                .eq('recurring_rule_id', id)
+                .eq('status', 'SCHEDULED');
+
             await generateExpenseInstances(); // Re-sync
             fetchData();
+        }
+    };
+
+    const handleCreateCustomEntry = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            const { error } = await supabase.from('expenses').insert({
+                recurring_rule_id: id,
+                date: format(customEntryData.date, 'yyyy-MM-dd'),
+                amount: parseFloat(customEntryData.amount),
+                description: `${rule?.name} (Custom Entry)`,
+                vendor: rule?.vendor || rule?.name,
+                category: rule?.category,
+                status: customEntryData.status,
+                paid_date: customEntryData.status === 'PAID' ? format(new Date(), 'yyyy-MM-dd') : null
+            });
+
+            if (error) throw error;
+
+            setIsCustomEntryModalOpen(false);
+            setCustomEntryData({ date: new Date(), amount: "", status: "PAID" });
+            fetchData();
+        } catch (err: any) {
+            alert("Error creating custom entry: " + err.message);
         }
     };
 
@@ -341,7 +483,7 @@ export default function RecurringRuleDetail() {
                                         </div>
                                         <div className="flex justify-between items-start mb-2 pr-8">
                                             <div className="text-xl font-bold text-white">
-                                                ₹{ver.amount.toLocaleString()}
+                                                ₹{Number(ver.amount).toLocaleString()}
                                                 <span className="text-sm text-zinc-500 font-normal ml-1">/mo</span>
                                             </div>
                                             {idx === 0 && <Badge className="bg-orange-500 text-white hover:bg-orange-600">Latest</Badge>}
@@ -418,6 +560,23 @@ export default function RecurringRuleDetail() {
                                     <div className="text-sm text-white font-medium">{format(new Date(rule.start_month), "MMM d, yyyy")}</div>
                                 </div>
                             </div>
+
+                            {/* Payment Method Row */}
+                            <div className="flex items-center gap-3 px-4 py-3">
+                                <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                                    <Clock size={14} className={rule.auto_pay ? "text-blue-400" : "text-zinc-400"} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Payment Method</div>
+                                    <div className="text-sm text-white font-medium">
+                                        {rule.auto_pay ? (
+                                            <span className="text-blue-400">Auto Pay</span>
+                                        ) : (
+                                            "Manual Pay"
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -441,9 +600,19 @@ export default function RecurringRuleDetail() {
 
                 {/* Right: Billing History */}
                 <div className="lg:col-span-2 space-y-6">
-                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <History size={16} className="text-blue-500" /> Billing History
-                    </h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                            <History size={16} className="text-blue-500" /> Billing History
+                        </h2>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 border-white/10 hover:bg-white/5 text-xs text-white"
+                            onClick={() => setIsCustomEntryModalOpen(true)}
+                        >
+                            <Plus size={14} className="text-zinc-400" /> Custom Entry
+                        </Button>
+                    </div>
 
                     <div className="bg-card border border-white/5 rounded-xl overflow-hidden">
                         {history.length === 0 ? (
@@ -467,7 +636,7 @@ export default function RecurringRuleDetail() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="font-mono text-white">₹{inst.amount.toLocaleString()}</div>
+                                            <div className="font-mono text-white">₹{Number(inst.amount).toLocaleString()}</div>
                                             <Badge variant="outline" className={`mt-1 border-white/10 text-[10px] capitalize ${getStatusColor(inst.status)}`}>
                                                 {inst.status}
                                             </Badge>
@@ -490,7 +659,7 @@ export default function RecurringRuleDetail() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="font-mono text-white">₹{inst.amount.toLocaleString()}</div>
+                                                        <div className="font-mono text-white">₹{Number(inst.amount).toLocaleString()}</div>
                                                         <Badge className={cn("text-[10px]", inst.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-500' : inst.status === 'PENDING_PAYMENT' ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500')}>
                                                             {inst.status}
                                                         </Badge>
@@ -576,6 +745,33 @@ export default function RecurringRuleDetail() {
                                 onChange={e => setFormData({ ...formData, due_day: e.target.value })}
                             />
                         </div>
+
+                        <div className="space-y-2 pt-2 border-t border-white/10">
+                            <Label className="flex items-center gap-1.5">
+                                <Calendar size={13} className="text-zinc-400" /> Start Date
+                            </Label>
+                            <DatePicker
+                                date={formData.start_month ? new Date(formData.start_month) : undefined}
+                                setDate={(d) => setFormData({ ...formData, start_month: d ? format(d, 'yyyy-MM-dd') : formData.start_month })}
+                                className="w-full bg-white/5 border-white/10"
+                            />
+                            <p className="text-[11px] text-zinc-500">
+                                Moving back → auto-generates past entries (marked PAID).
+                                Moving forward → deletes entries before new start.
+                            </p>
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t border-white/10">
+                            <Label>Payment Method</Label>
+                            <select
+                                className="w-full flex h-10 items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20"
+                                value={formData.auto_pay ? "true" : "false"}
+                                onChange={(e) => setFormData({ ...formData, auto_pay: e.target.value === "true" })}
+                            >
+                                <option value="false" className="bg-[#111] text-white">Manual Pay (You log it when paid)</option>
+                                <option value="true" className="bg-[#111] text-white">Auto Pay (Automatically marked paid)</option>
+                            </select>
+                        </div>
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
                             <Button type="submit" className="bg-orange-500 hover:bg-orange-600">Save Changes</Button>
@@ -621,6 +817,55 @@ export default function RecurringRuleDetail() {
                     </form>
                 </DialogContent>
             </Dialog >
+
+            {/* Add Custom Entry Modal */}
+            <Dialog open={isCustomEntryModalOpen} onOpenChange={setIsCustomEntryModalOpen}>
+                <DialogContent className="bg-zinc-900 border-white/10 text-white sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-semibold">Add Custom Entry</DialogTitle>
+                        <DialogDescription className="text-sm text-zinc-400">
+                            Manually log a past or special transaction for this recurring series.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateCustomEntry} className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Date</Label>
+                            <DatePicker
+                                date={customEntryData.date}
+                                setDate={(date) => date && setCustomEntryData({ ...customEntryData, date })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Amount</Label>
+                            <Input
+                                type="number"
+                                required
+                                placeholder="e.g. 1500"
+                                className="bg-white/5 border-white/10"
+                                value={customEntryData.amount}
+                                onChange={(e) => setCustomEntryData({ ...customEntryData, amount: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</Label>
+                            <select
+                                required
+                                className="w-full flex h-10 items-center justify-between rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-white/20"
+                                value={customEntryData.status}
+                                onChange={(e) => setCustomEntryData({ ...customEntryData, status: e.target.value })}
+                            >
+                                <option value="PAID" className="bg-[#111] text-white">Paid</option>
+                                <option value="PENDING_PAYMENT" className="bg-[#111] text-white">Pending</option>
+                                <option value="SCHEDULED" className="bg-[#111] text-white">Scheduled</option>
+                            </select>
+                        </div>
+                        <DialogFooter className="mt-6 pt-2">
+                            <Button type="button" variant="ghost" onClick={() => setIsCustomEntryModalOpen(false)}>Cancel</Button>
+                            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">Save Entry</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Delete Modal */}
             < Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} >
