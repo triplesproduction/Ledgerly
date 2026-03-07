@@ -130,7 +130,7 @@ function NavItem({ href, icon, label, active = false, onClick }: { href: string;
         <Link href={href} className="block" onClick={onClick}>
             <Button
                 variant="ghost"
-                className={`w-full justify-start px-4 h-12 rounded-xl mb-1 transition-all duration-300 relative group overflow-hidden ${active
+                className={`w-full justify-start pl-4 pr-8 h-12 rounded-xl mb-1 transition-all duration-300 relative group overflow-hidden ${active
                     ? "bg-[#09090b] text-white font-bold border border-white/10 shadow-[0_0_30px_-10px_rgba(249,115,22,0.6)]"
                     : "text-zinc-500 border border-transparent hover:bg-[#121217] hover:text-white hover:border-white/5 hover:shadow-[0_0_20px_-5px_rgba(249,115,22,0.15)]"
                     }`}

@@ -273,6 +273,9 @@ export default function ExpensesPage() {
                                                     {item.expense_type === 'office' && (
                                                         <span className="text-[10px] text-orange-500/80 font-medium">Expense Type: Office</span>
                                                     )}
+                                                    {item.expense_type === 'campaign' && (
+                                                        <span className="text-[10px] text-emerald-500/80 font-medium italic">Campaign Expense</span>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                             <TableCell><CategoryPill category={item.category} /></TableCell>
