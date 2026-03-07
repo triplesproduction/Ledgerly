@@ -21,7 +21,7 @@ const CATEGORIES: { label: string; value: CampaignExpenseCategory }[] = [
     { label: 'Travel', value: 'Travel' },
     { label: 'Accommodation', value: 'Accommodation' },
     { label: 'Food', value: 'Food' },
-    { label: 'Ad Spend', value: 'Ad Spend' }
+    { label: 'Other Expense', value: 'Other Expense' }
 ];
 
 export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignExpenseDialogProps) {

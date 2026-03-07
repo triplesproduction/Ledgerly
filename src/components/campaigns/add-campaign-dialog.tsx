@@ -28,7 +28,7 @@ export function AddCampaignDialog({ onSuccess }: AddCampaignDialogProps) {
     const [budgetTravel, setBudgetTravel] = useState("");
     const [budgetAcc, setBudgetAcc] = useState("");
     const [budgetFood, setBudgetFood] = useState("");
-    const [budgetAd, setBudgetAd] = useState("");
+    const [budgetOther, setBudgetOther] = useState("");
 
     const [startDate, setStartDate] = useState<Date | undefined>(new Date());
     const [endDate, setEndDate] = useState<Date | undefined>(new Date());
@@ -91,7 +91,7 @@ export function AddCampaignDialog({ onSuccess }: AddCampaignDialogProps) {
             budget_travel: parseAmount(budgetTravel) || 0,
             budget_accommodation: parseAmount(budgetAcc) || 0,
             budget_food: parseAmount(budgetFood) || 0,
-            budget_ad_spend: parseAmount(budgetAd) || 0,
+            budget_other_expense: parseAmount(budgetOther) || 0,
             start_date: format(startDate, 'yyyy-MM-dd'),
             end_date: format(endDate, 'yyyy-MM-dd'),
             status: 'Active'
@@ -112,7 +112,7 @@ export function AddCampaignDialog({ onSuccess }: AddCampaignDialogProps) {
             setBudgetTravel("");
             setBudgetAcc("");
             setBudgetFood("");
-            setBudgetAd("");
+            setBudgetOther("");
             setStartDate(new Date());
             setEndDate(new Date());
             onSuccess();
@@ -233,13 +233,13 @@ export function AddCampaignDialog({ onSuccess }: AddCampaignDialogProps) {
                             </div>
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-rose-400">Ad Spend Budget</Label>
+                            <Label className="text-zinc-400">Other Expense Budget</Label>
                             <div className="relative">
                                 <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                                 <Input
-                                    className="bg-white/5 border-white/10 pl-9 h-11 text-white focus-visible:ring-1 focus-visible:ring-rose-500/30"
-                                    value={budgetAd}
-                                    onChange={(e) => setBudgetAd(e.target.value)}
+                                    className="bg-white/5 border-white/10 pl-9 h-11 text-white focus-visible:ring-1 focus-visible:ring-zinc-500/30"
+                                    value={budgetOther}
+                                    onChange={(e) => setBudgetOther(e.target.value)}
                                     placeholder="0"
                                 />
                             </div>

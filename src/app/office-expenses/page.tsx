@@ -29,6 +29,25 @@ function formatCurrency(amount: number) {
 }
 
 export default function OfficeExpensesPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen p-6">
+                <div className="h-8 w-48 bg-white/5 rounded-xl animate-pulse mb-8" />
+                <div className="grid gap-6 md:grid-cols-3 mb-8">
+                    <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
+                    <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
+                    <div className="h-32 bg-white/5 rounded-2xl animate-pulse" />
+                </div>
+                <div className="h-10 w-full bg-white/5 rounded-xl animate-pulse mb-6" />
+                <div className="h-96 w-full bg-white/5 rounded-2xl animate-pulse" />
+            </div>
+        }>
+            <OfficeExpensesContent />
+        </Suspense>
+    );
+}
+
+function OfficeExpensesContent() {
     const [editingExpense, setEditingExpense] = useState<any | null>(null);
 
     // Data State
@@ -105,9 +124,8 @@ export default function OfficeExpensesPage() {
     const fetchExpenses = async () => {
         setIsLoading(true);
 
-        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-        const fromParam = params.get('from');
-        const toParam = params.get('to');
+        const fromParam = searchParams.get('from');
+        const toParam = searchParams.get('to');
 
         const now = new Date();
         const from = fromParam ? new Date(fromParam) : startOfMonth(now);
@@ -282,8 +300,10 @@ export default function OfficeExpensesPage() {
                             </TableRow>
                         ) : (
                             Object.entries(
-                                expensesData.reduce((acc: any, item) => {
-                                    const monthKey = format(new Date(item.date), "MMMM");
+                                (expensesData || []).reduce((acc: any, item) => {
+                                    const dateObj = new Date(item.date);
+                                    if (isNaN(dateObj.getTime())) return acc;
+                                    const monthKey = format(dateObj, "MMMM");
                                     if (!acc[monthKey]) acc[monthKey] = [];
                                     acc[monthKey].push(item);
                                     return acc;

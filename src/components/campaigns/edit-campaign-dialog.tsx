@@ -31,7 +31,7 @@ export function EditCampaignDialog({ campaign, onSuccess }: EditCampaignDialogPr
     const [budgetTravel, setBudgetTravel] = useState(campaign.budget_travel?.toString() || "");
     const [budgetAcc, setBudgetAcc] = useState(campaign.budget_accommodation?.toString() || "");
     const [budgetFood, setBudgetFood] = useState(campaign.budget_food?.toString() || "");
-    const [budgetAd, setBudgetAd] = useState(campaign.budget_ad_spend?.toString() || "");
+    const [budgetOther, setBudgetOther] = useState(campaign.budget_other_expense?.toString() || "");
 
     const [startDate, setStartDate] = useState<Date | undefined>(new Date(campaign.start_date));
     const [endDate, setEndDate] = useState<Date | undefined>(new Date(campaign.end_date));
@@ -64,7 +64,7 @@ export function EditCampaignDialog({ campaign, onSuccess }: EditCampaignDialogPr
             setBudgetTravel(campaign.budget_travel?.toString() || "");
             setBudgetAcc(campaign.budget_accommodation?.toString() || "");
             setBudgetFood(campaign.budget_food?.toString() || "");
-            setBudgetAd(campaign.budget_ad_spend?.toString() || "");
+            setBudgetOther(campaign.budget_other_expense?.toString() || "");
             setStartDate(new Date(campaign.start_date));
             setEndDate(new Date(campaign.end_date));
         }
@@ -118,7 +118,7 @@ export function EditCampaignDialog({ campaign, onSuccess }: EditCampaignDialogPr
             budget_travel: parseAmount(budgetTravel) || 0,
             budget_accommodation: parseAmount(budgetAcc) || 0,
             budget_food: parseAmount(budgetFood) || 0,
-            budget_ad_spend: parseAmount(budgetAd) || 0,
+            budget_other_expense: parseAmount(budgetOther) || 0,
             start_date: format(startDate, 'yyyy-MM-dd'),
             end_date: format(endDate, 'yyyy-MM-dd'),
             status: status
@@ -266,13 +266,13 @@ export function EditCampaignDialog({ campaign, onSuccess }: EditCampaignDialogPr
                             </div>
                         </div>
                         <div className="grid gap-1.5">
-                            <Label className="text-rose-400">Ad Spend Budget</Label>
+                            <Label className="text-zinc-400">Other Expense Budget</Label>
                             <div className="relative">
                                 <IndianRupee size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
                                 <Input
-                                    className="bg-white/5 border-white/10 pl-9 h-11 text-white focus-visible:ring-1 focus-visible:ring-rose-500/30"
-                                    value={budgetAd}
-                                    onChange={(e) => setBudgetAd(e.target.value)}
+                                    className="bg-white/5 border-white/10 pl-9 h-11 text-white focus-visible:ring-1 focus-visible:ring-zinc-500/30"
+                                    value={budgetOther}
+                                    onChange={(e) => setBudgetOther(e.target.value)}
                                     placeholder="0"
                                 />
                             </div>

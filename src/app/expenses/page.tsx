@@ -28,6 +28,20 @@ type ExpenseItem = {
 };
 
 export default function ExpensesPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen p-6">
+                <div className="h-8 w-48 bg-white/5 rounded-xl animate-pulse mb-8" />
+                <div className="h-10 w-full bg-white/5 rounded-xl animate-pulse mb-6" />
+                <div className="h-96 w-full bg-white/5 rounded-2xl animate-pulse" />
+            </div>
+        }>
+            <ExpensesPageContent />
+        </Suspense>
+    );
+}
+
+function ExpensesPageContent() {
     const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
 
     // Pagination & Data State
@@ -70,10 +84,9 @@ export default function ExpensesPage() {
     const fetchExpenses = async () => {
         setIsLoading(true);
 
-        // Logical Source of Truth: URL Params
-        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-        const fromParam = params.get('from');
-        const toParam = params.get('to');
+        // Logical Source of Truth: searchParams hook
+        const fromParam = searchParams.get('from');
+        const toParam = searchParams.get('to');
 
         // Default to This Month if logic fails or params missing (though MonthFilter should handle it)
         const now = new Date();
@@ -181,9 +194,9 @@ export default function ExpensesPage() {
 
 
     // Filter
-    const filteredExpenses = expensesData.filter((item) =>
-        item.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredExpenses = (expensesData || []).filter((item) =>
+        (item.vendor || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.category || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -245,8 +258,10 @@ export default function ExpensesPage() {
                             </TableRow>
                         ) : (
                             Object.entries(
-                                filteredExpenses.reduce((acc: any, item) => {
-                                    const monthKey = format(new Date(item.date), "MMMM");
+                                (filteredExpenses || []).reduce((acc: any, item) => {
+                                    const dateObj = new Date(item.date);
+                                    if (isNaN(dateObj.getTime())) return acc;
+                                    const monthKey = format(dateObj, "MMMM");
                                     if (!acc[monthKey]) acc[monthKey] = [];
                                     acc[monthKey].push(item);
                                     return acc;

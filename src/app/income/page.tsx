@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, Fragment as Blank, Suspense } from "react";
+import { useState, useEffect, Fragment as Blank, Suspense, useMemo } from "react";
+import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,21 @@ function ProjectDetailPopover({ description }: { description: string }) {
 }
 
 export default function IncomePage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen p-6">
+                <div className="h-8 w-48 bg-white/5 rounded-xl animate-pulse mb-8" />
+                <div className="h-10 w-full bg-white/5 rounded-xl animate-pulse mb-6" />
+                <div className="h-96 w-full bg-white/5 rounded-2xl animate-pulse" />
+            </div>
+        }>
+            <IncomePageContent />
+        </Suspense>
+    );
+}
+
+function IncomePageContent() {
+    const searchParams = useSearchParams();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isTrendsOpen, setIsTrendsOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
@@ -98,34 +114,18 @@ export default function IncomePage() {
     const ITEMS_PER_PAGE = 15;
 
     // Derived Date Range from URL (Single Source of Truth)
-    // Using useEffect to read URL params on client side instead of useSearchParams
-    const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>(() => {
+    const dateRange = useMemo(() => {
+        const fromParam = searchParams.get('from');
+        const toParam = searchParams.get('to');
         const now = new Date();
-        return { from: startOfMonth(now), to: endOfMonth(now) };
-    });
+        const from = fromParam ? new Date(fromParam) : startOfMonth(now);
+        const to = toParam ? new Date(toParam) : endOfMonth(now);
 
-    useEffect(() => {
-        const updateDateRangeFromURL = () => {
-            if (typeof window !== 'undefined') {
-                const params = new URLSearchParams(window.location.search);
-                const fromParam = params.get('from');
-                const toParam = params.get('to');
-                if (fromParam && toParam) {
-                    const newFrom = new Date(fromParam);
-                    const newTo = new Date(toParam);
-                    // Only update if different to avoid infinite loops
-                    if (newFrom.getTime() !== dateRange.from.getTime() || newTo.getTime() !== dateRange.to.getTime()) {
-                        setDateRange({ from: newFrom, to: newTo });
-                    }
-                }
-            }
+        return {
+            from: isNaN(from.getTime()) ? startOfMonth(now) : from,
+            to: isNaN(to.getTime()) ? endOfMonth(now) : to
         };
-
-        // Poll for URL changes every 300ms
-        const interval = setInterval(updateDateRangeFromURL, 300);
-
-        return () => clearInterval(interval);
-    }, [dateRange]);
+    }, [searchParams]);
 
     const [paymentMethods, setPaymentMethods] = useState<{ label: string, value: string }[]>([]);
 
@@ -458,8 +458,10 @@ export default function IncomePage() {
                             </TableRow>
                         ) : (
                             Object.entries(
-                                filteredIncome.reduce((acc: any, item) => {
-                                    const monthKey = format(new Date(item.date), "MMMM");
+                                (filteredIncome || []).reduce((acc: any, item) => {
+                                    const dateObj = new Date(item.date);
+                                    if (isNaN(dateObj.getTime())) return acc;
+                                    const monthKey = format(dateObj, "MMMM");
                                     if (!acc[monthKey]) acc[monthKey] = [];
                                     acc[monthKey].push(item);
                                     return acc;

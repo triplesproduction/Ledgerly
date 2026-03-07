@@ -34,14 +34,14 @@ export interface Campaign {
     budget_travel?: number;
     budget_accommodation?: number;
     budget_food?: number;
-    budget_ad_spend?: number;
+    budget_other_expense?: number;
     start_date: string;
     end_date: string;
     status: 'Active' | 'Completed' | string;
     created_at?: string;
 }
 
-export type CampaignExpenseCategory = 'Travel' | 'Accommodation' | 'Food' | 'Ad Spend';
+export type CampaignExpenseCategory = 'Travel' | 'Accommodation' | 'Food' | 'Other Expense';
 
 export interface CampaignExpense {
     id: string;

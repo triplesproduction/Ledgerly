@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
-import { IndianRupee, ArrowLeft, Plane, Home, Coffee, Megaphone } from "lucide-react";
+import { IndianRupee, ArrowLeft, Plane, Home, Coffee, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddCampaignExpenseDialog } from "@/components/campaigns/add-campaign-expense-dialog";
@@ -77,10 +77,10 @@ export default function CampaignDetailsPage() {
         'Travel': <Plane size={24} className="text-blue-500" />,
         'Accommodation': <Home size={24} className="text-purple-500" />,
         'Food': <Coffee size={24} className="text-amber-500" />,
-        'Ad Spend': <Megaphone size={24} className="text-rose-500" />
+        'Other Expense': <Package size={24} className="text-zinc-500" />
     };
 
-    const categoriesList = ['Travel', 'Accommodation', 'Food', 'Ad Spend'];
+    const categoriesList = ['Travel', 'Accommodation', 'Food', 'Other Expense'];
 
     return (
         <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6">
@@ -170,7 +170,7 @@ export default function CampaignDetailsPage() {
                     if (cat === 'Travel') allocated = campaign.budget_travel || 0;
                     if (cat === 'Accommodation') allocated = campaign.budget_accommodation || 0;
                     if (cat === 'Food') allocated = campaign.budget_food || 0;
-                    if (cat === 'Ad Spend') allocated = campaign.budget_ad_spend || 0;
+                    if (cat === 'Other Expense') allocated = campaign.budget_other_expense || 0;
 
                     const percentage = totalSpent > 0 ? ((amountDisp / totalSpent) * 100).toFixed(1) : 0;
 
@@ -248,8 +248,8 @@ export default function CampaignDetailsPage() {
                                     <TableCell className="font-semibold text-foreground">{expense.description}</TableCell>
                                     <TableCell>
                                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border uppercase ${expense.payment_method === 'Cash'
-                                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                            : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                                             }`}>
                                             {expense.payment_method === 'Cash' ? '💵' : '💳'} {expense.payment_method || 'Online'}
                                         </span>
