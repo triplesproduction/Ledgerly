@@ -532,16 +532,16 @@ export const CalendarDatePicker = React.forwardRef<
                             </span>
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-fit flex items-center justify-center">
-                        <div className="w-[960px] bg-[#0c0c0e] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                            <div className="flex h-[580px]">
+                    <DialogContent className="p-0 border-0 bg-transparent shadow-none w-full max-w-[95vw] lg:max-w-fit flex items-center justify-center !z-[100]">
+                        <div className="w-full lg:w-[960px] bg-[#0c0c0e] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 overflow-y-auto max-h-[90vh] lg:max-h-none no-scrollbar">
+                            <div className="flex flex-col lg:flex-row h-auto lg:h-[580px]">
                                 {numberOfMonths === 2 && (
-                                    <div className="w-[200px] border-r border-white/5 bg-[#111114] p-6 flex flex-col gap-1 overflow-y-auto">
+                                    <div className="w-full lg:w-[200px] border-b lg:border-b-0 lg:border-r border-white/5 bg-[#111114] p-3 lg:p-6 flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-y-auto no-scrollbar whitespace-nowrap lg:whitespace-normal">
                                         {dateRanges.map(({ label, start, end }) => (
                                             <button
                                                 key={label}
                                                 className={cn(
-                                                    "flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold transition-all text-left",
+                                                    "flex items-center gap-3 px-3 lg:px-4 py-2 lg:py-3 rounded-xl lg:rounded-2xl text-[10px] lg:text-xs font-semibold transition-all text-left flex-shrink-0",
                                                     selectedRange === label
                                                         ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
                                                         : "text-zinc-500 hover:text-white hover:bg-white/5"
@@ -554,23 +554,23 @@ export const CalendarDatePicker = React.forwardRef<
                                                     setYearTo(end.getFullYear());
                                                 }}
                                             >
-                                                <Clock className={cn("h-4 w-4", selectedRange === label ? "text-white" : "text-zinc-600")} />
+                                                <Clock className={cn("h-3 w-3 lg:h-4 lg:w-4", selectedRange === label ? "text-white" : "text-zinc-600")} />
                                                 {label}
                                             </button>
                                         ))}
                                     </div>
                                 )}
                                 <div className="flex flex-col flex-1 bg-[#0c0c0e]">
-                                    <div className="p-6 border-b border-white/5 bg-[#111114] flex items-center justify-between px-8">
-                                        <div className="flex gap-4">
-                                            <div className="flex items-center gap-2">
+                                    <div className="p-4 lg:p-6 border-b border-white/5 bg-[#111114] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 lg:px-8">
+                                        <div className="flex flex-wrap gap-2 lg:gap-4 w-full sm:w-auto">
+                                            <div className="flex items-center gap-1 lg:gap-2">
                                                 <Select
                                                     onValueChange={(value) => {
                                                         handleMonthChange(months.indexOf(value), "from");
                                                     }}
                                                     value={monthFrom ? months[monthFrom.getMonth()] : undefined}
                                                 >
-                                                    <SelectTrigger className="w-[140px] bg-zinc-900 border-white/5 text-zinc-300 h-9 rounded-lg">
+                                                    <SelectTrigger className="w-[100px] lg:w-[140px] bg-zinc-900 border-white/5 text-zinc-300 h-8 lg:h-9 rounded-lg text-xs lg:text-sm">
                                                         <SelectValue placeholder="Month" />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-zinc-900 border-white/10 text-white">
@@ -585,7 +585,7 @@ export const CalendarDatePicker = React.forwardRef<
                                                     }}
                                                     value={yearFrom ? yearFrom.toString() : undefined}
                                                 >
-                                                    <SelectTrigger className="w-[100px] bg-zinc-900 border-white/5 text-zinc-300 h-9 rounded-lg">
+                                                    <SelectTrigger className="w-[80px] lg:w-[100px] bg-zinc-900 border-white/5 text-zinc-300 h-8 lg:h-9 rounded-lg text-xs lg:text-sm">
                                                         <SelectValue placeholder="Year" />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-zinc-900 border-white/10 text-white">
@@ -598,15 +598,15 @@ export const CalendarDatePicker = React.forwardRef<
 
                                             {numberOfMonths === 2 && (
                                                 <>
-                                                    <div className="text-zinc-700 mx-2">—</div>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="text-zinc-700 mx-1 lg:mx-2 flex items-center">—</div>
+                                                    <div className="flex items-center gap-1 lg:gap-2">
                                                         <Select
                                                             onValueChange={(value) => {
                                                                 handleMonthChange(months.indexOf(value), "to");
                                                             }}
                                                             value={monthTo ? months[monthTo.getMonth()] : undefined}
                                                         >
-                                                            <SelectTrigger className="w-[140px] bg-zinc-900 border-white/5 text-zinc-300 h-9 rounded-lg">
+                                                            <SelectTrigger className="w-[100px] lg:w-[140px] bg-zinc-900 border-white/5 text-zinc-300 h-8 lg:h-9 rounded-lg text-xs lg:text-sm">
                                                                 <SelectValue placeholder="Month" />
                                                             </SelectTrigger>
                                                             <SelectContent className="bg-zinc-900 border-white/10 text-white">
@@ -621,7 +621,7 @@ export const CalendarDatePicker = React.forwardRef<
                                                             }}
                                                             value={yearTo ? yearTo.toString() : undefined}
                                                         >
-                                                            <SelectTrigger className="w-[100px] bg-zinc-900 border-white/5 text-zinc-300 h-9 rounded-lg">
+                                                            <SelectTrigger className="w-[80px] lg:w-[100px] bg-zinc-900 border-white/5 text-zinc-300 h-8 lg:h-9 rounded-lg text-xs lg:text-sm">
                                                                 <SelectValue placeholder="Year" />
                                                             </SelectTrigger>
                                                             <SelectContent className="bg-zinc-900 border-white/10 text-white">
@@ -638,13 +638,13 @@ export const CalendarDatePicker = React.forwardRef<
                                             variant="ghost"
                                             size="icon"
                                             onClick={handleClose}
-                                            className="text-zinc-500 hover:text-white hover:bg-white/5 rounded-full"
+                                            className="text-zinc-500 hover:text-white hover:bg-white/5 rounded-full hidden sm:flex"
                                         >
                                             <ChevronDown className="h-5 w-5 rotate-180" />
                                         </Button>
                                     </div>
 
-                                    <div className="flex-1 flex items-center justify-center p-8">
+                                    <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
                                         <Calendar
                                             mode="range"
                                             defaultMonth={monthFrom}
@@ -654,7 +654,7 @@ export const CalendarDatePicker = React.forwardRef<
                                             onSelect={handleDateSelect}
                                             numberOfMonths={numberOfMonths}
                                             showOutsideDays={false}
-                                            className="p-0 scale-110"
+                                            className="p-0 scale-90 sm:scale-100 lg:scale-110"
                                             components={{
                                                 // @ts-ignore
                                                 Caption: () => null
@@ -662,16 +662,16 @@ export const CalendarDatePicker = React.forwardRef<
                                         />
                                     </div>
 
-                                    <div className="p-6 border-t border-white/5 bg-[#111114]/50 flex items-center justify-end gap-3 px-8">
+                                    <div className="p-4 lg:p-6 border-t border-white/5 bg-[#111114]/50 flex items-center justify-end gap-3 px-6 lg:px-8">
                                         <button
                                             onClick={handleClose}
-                                            className="text-sm font-medium text-zinc-500 hover:text-white transition-colors px-6 py-2 rounded-xl hover:bg-white/5"
+                                            className="text-xs lg:text-sm font-medium text-zinc-500 hover:text-white transition-colors px-4 lg:px-6 py-2 rounded-xl hover:bg-white/5"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             onClick={handleClose}
-                                            className="bg-orange-500 text-white px-8 py-2.5 rounded-2xl text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/25 active:scale-95"
+                                            className="bg-orange-500 text-white px-6 lg:px-8 py-2 lg:py-2.5 rounded-xl lg:rounded-2xl text-xs lg:text-sm font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/25 active:scale-95"
                                         >
                                             {numberOfMonths === 2 ? "Apply Range" : "Confirm Date"}
                                         </button>

@@ -445,7 +445,7 @@ export default function RetainerDetailPage() {
     if (!contract) return <div className="p-8 text-white">Contract not found.</div>;
 
     return (
-        <div className="min-h-screen bg-transparent p-8 font-sans text-foreground">
+        <div className="min-h-screen bg-transparent px-3 py-8 sm:p-8 font-sans text-foreground">
             {/* Header */}
             <div className="flex items-center gap-4 mb-8">
                 <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white">
@@ -458,14 +458,14 @@ export default function RetainerDetailPage() {
                                 <Input
                                     value={editedName}
                                     onChange={(e) => setEditedName(e.target.value)}
-                                    className="bg-white/5 border-white/10 text-white h-9 font-bold text-xl w-[400px]"
+                                    className="bg-white/5 border-white/10 text-white h-9 font-bold text-xl w-full sm:w-[400px]"
                                 />
                                 <Button size="sm" onClick={handleUpdateName} className="bg-orange-500 hover:bg-orange-600 h-9">Save</Button>
                                 <Button size="sm" variant="ghost" onClick={() => setIsEditingName(false)} className="h-9">Cancel</Button>
                             </div>
                         ) : (
                             <div className="flex items-center gap-3 group">
-                                <h1 className="text-2xl font-bold text-white">
+                                <h1 className="text-xl sm:text-2xl font-bold text-white break-words">
                                     {contract.name}
                                 </h1>
                                 <button
@@ -477,7 +477,7 @@ export default function RetainerDetailPage() {
                                 >
                                     <Pencil size={16} />
                                 </button>
-                                <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 capitalize ml-2">
+                                <Badge variant="outline" className="text-emerald-500 border-emerald-500/20 bg-emerald-500/10 capitalize shrink-0">
                                     {contract.status}
                                 </Badge>
                                 <Button
@@ -577,8 +577,8 @@ export default function RetainerDetailPage() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="font-mono text-white">₹{inst.total_due.toLocaleString()}</div>
+                                    <div className="text-right shrink-0">
+                                        <div className="font-mono text-white text-sm sm:text-base">₹{inst.total_due.toLocaleString()}</div>
                                         <Badge variant="secondary" className="text-[10px] h-5 bg-zinc-800 text-zinc-400">
                                             {inst.status}
                                         </Badge>
@@ -587,8 +587,8 @@ export default function RetainerDetailPage() {
 
                                 {/* Expanded Breakdown */}
                                 {selectedInstance?.id === inst.id && (
-                                    <div className="bg-zinc-900/50 p-4 pl-16 border-t border-white/5">
-                                        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Generated Milestones</h4>
+                                    <div className="bg-zinc-900/50 p-3 sm:p-4 pl-4 sm:pl-16 border-t border-white/5">
+                                        <h4 className="text-[10px] sm:text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Generated Milestones</h4>
                                         <div className="space-y-2">
                                             {selectedInstanceMilestones.map((ms: any) => (
                                                 <div key={ms.id} className="flex items-center justify-between text-sm bg-white/5 p-2 rounded-lg border border-white/5">
@@ -596,38 +596,38 @@ export default function RetainerDetailPage() {
                                                         <div className="text-white">{ms.milestone_label}</div>
                                                         <div className="text-xs text-zinc-500">{format(new Date(ms.date), "MMM d, yyyy")}</div>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="text-white font-mono">₹{ms.amount.toLocaleString()}</div>
-                                                        <Badge className={cn("text-[10px]", ms.status === 'RECEIVED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500')}>
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                                        <div className="text-white font-mono font-bold">₹{ms.amount.toLocaleString()}</div>
+                                                        <Badge className={cn("text-[10px] w-fit", ms.status === 'RECEIVED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500')}>
                                                             {ms.status}
                                                         </Badge>
-                                                        {/* Quick Actions */}
-                                                        <div className="flex items-center border-l border-white/10 pl-2 ml-2 gap-1">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className={cn("h-6 w-6 p-0 hover:text-white", ms.status === 'RECEIVED' ? "text-emerald-500" : "text-zinc-400")}
-                                                                title="Mark as Paid"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleMarkMilestonePaid(ms);
-                                                                }}
-                                                            >
-                                                                {/* Check Icon */}
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-6 w-6 p-0 text-zinc-400 hover:text-white"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEditMilestone(ms);
-                                                                }}
-                                                            >
-                                                                <Clock size={12} />
-                                                            </Button>
-                                                        </div>
+                                                    </div>
+                                                    {/* Quick Actions */}
+                                                    <div className="flex items-center border-l border-white/10 pl-2 ml-2 gap-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className={cn("h-6 w-6 p-0 hover:text-white", ms.status === 'RECEIVED' ? "text-emerald-500" : "text-zinc-400")}
+                                                            title="Mark as Paid"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleMarkMilestonePaid(ms);
+                                                            }}
+                                                        >
+                                                            {/* Check Icon */}
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-6 w-6 p-0 text-zinc-400 hover:text-white"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditMilestone(ms);
+                                                            }}
+                                                        >
+                                                            <Clock size={12} />
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -639,19 +639,19 @@ export default function RetainerDetailPage() {
                         ))}
                     </div>
                 </div>
-
-                {/* Edit Milestone Modal */}
-                <EditMilestoneModal
-                    milestone={editMilestone}
-                    isOpen={!!editMilestone}
-                    onClose={() => setEditMilestone(null)}
-                    onSave={() => {
-                        // Refresh data
-                        if (selectedInstance) handleViewInstance(selectedInstance);
-                        fetchData();
-                    }}
-                />
             </div>
+
+            {/* Edit Milestone Modal */}
+            <EditMilestoneModal
+                milestone={editMilestone}
+                isOpen={!!editMilestone}
+                onClose={() => setEditMilestone(null)}
+                onSave={() => {
+                    // Refresh data
+                    if (selectedInstance) handleViewInstance(selectedInstance);
+                    fetchData();
+                }}
+            />
 
             {/* Modal */}
             <Dialog open={isNewVerOpen} onOpenChange={setIsNewVerOpen}>

@@ -102,7 +102,7 @@ export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignE
                 <DialogHeader className="p-4 pb-2 space-y-1">
                     <DialogTitle>Add Campaign Expense</DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-7 px-6 py-4">
+                <div className="grid gap-4 sm:gap-7 px-4 sm:px-6 py-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="grid gap-1.5">
                             <Label>Date</Label>

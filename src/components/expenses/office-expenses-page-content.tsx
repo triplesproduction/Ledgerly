@@ -112,7 +112,7 @@ export default function OfficeExpensesPageContent() {
     }, [page, categoryFilter, searchParams]);
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6 space-y-8">
+        <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-6 pb-24 lg:pb-6 space-y-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
@@ -144,13 +144,21 @@ export default function OfficeExpensesPageContent() {
                 </Card>
             </div>
 
-            <div className="flex flex-row items-center gap-3 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
-                <select className="bg-white/5 border-none text-sm text-foreground h-10 rounded-xl px-4 outline-none appearance-none min-w-[150px]" value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20 overflow-hidden">
+                <select
+                    className="bg-white/5 border-none text-sm text-foreground h-10 rounded-xl px-4 outline-none appearance-none w-full sm:w-auto sm:min-w-[150px] cursor-pointer"
+                    value={categoryFilter}
+                    onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+                >
                     <option value="all" className="bg-[#121217]">All Categories</option>
                     {OFFICE_CATEGORIES.map(c => (<option key={c.value} value={c.value} className="bg-[#121217]">{c.label}</option>))}
                 </select>
-                <div className="h-4 w-px bg-white/10"></div>
-                <Suspense fallback={<div className="h-10 w-64 bg-white/5 rounded-xl animate-pulse" />}><MonthFilter /></Suspense>
+                <div className="h-px w-full sm:h-4 sm:w-px bg-white/10 my-1 sm:my-0"></div>
+                <div className="flex-1 overflow-x-auto custom-scrollbar-hidden py-1">
+                    <Suspense fallback={<div className="h-10 w-64 bg-white/5 rounded-xl animate-pulse" />}>
+                        <MonthFilter />
+                    </Suspense>
+                </div>
             </div>
 
             <div className="rounded-2xl border border-white/5 bg-card shadow-2xl overflow-x-auto custom-scrollbar">

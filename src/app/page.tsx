@@ -297,7 +297,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
+    <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-6">
       {/* Container for content */}
       <div className="space-y-6">
 
@@ -323,7 +323,7 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto">
             <Button
               variant="outline"
-              className="rounded-full border-white/10 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 h-10 px-6"
+              className="rounded-full border-white/10 text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 h-10 px-6 hidden lg:inline-flex"
               onClick={handleSync}
               disabled={isSyncing}
             >

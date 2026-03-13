@@ -191,7 +191,7 @@ export function MonthFilter() {
             </div>
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl h-10 hidden lg:flex">
+            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl h-10 hidden md:flex">
                 <Button
                     variant="ghost"
                     size="sm"

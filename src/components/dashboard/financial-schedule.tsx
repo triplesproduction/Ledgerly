@@ -5,7 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, CheckCircle2, Circle } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
-import { format } from "date-fns";
+import { format, addMonths } from "date-fns";
 
 export function FinancialSchedule() {
     const [activeTab, setActiveTab] = useState<"receivables" | "payables">("receivables");
@@ -19,7 +19,9 @@ export function FinancialSchedule() {
     const fetchData = async () => {
         setIsLoading(true);
 
-        // Fetch Payables: Expenses that are NOT paid
+        const today = format(new Date(), 'yyyy-MM-dd');
+
+        // Fetch Payables: ONLY Unpaid/Scheduled Expenses
         const { data: expenses } = await supabase
             .from('expenses')
             .select('*')
@@ -28,7 +30,7 @@ export function FinancialSchedule() {
             .order('date', { ascending: true })
             .limit(50);
 
-        // Fetch Receivables: Income that is NOT received
+        // Fetch Receivables: ONLY Pending/Expected Income
         const { data: income } = await supabase
             .from('income')
             .select('*, clients(name)')
@@ -43,7 +45,9 @@ export function FinancialSchedule() {
                 vendor: item.vendor || item.description || "Unknown Vendor",
                 service: item.service || item.category,
                 amount: Number(item.amount),
-                due: new Date(item.date).toLocaleDateString(),
+                due: format(new Date(item.date), "MMM dd"), // Original due date
+                paid_at: item.paid_date ? format(new Date(item.paid_date), "MMM dd") : null,
+                date: item.date, // Store for sorting/comparison
                 status: item.status || "SCHEDULED",
                 type: 'payable'
             })));
@@ -61,7 +65,6 @@ export function FinancialSchedule() {
                     clientName = item.description.split(":")[0].trim();
                     desc = item.description.split(":")[1].trim();
                 } else if (joinedClientName) {
-                    // If we have a real client name, use description as project
                     desc = item.description || "Project";
                 }
 
@@ -70,7 +73,9 @@ export function FinancialSchedule() {
                     client: clientName || "Client",
                     project: desc || "Project",
                     amount: Number(item.amount),
-                    due: new Date(item.date).toLocaleDateString(),
+                    due: item.expected_date ? format(new Date(item.expected_date), "MMM dd") : format(new Date(item.date), "MMM dd"),
+                    paid_at: item.status === 'RECEIVED' ? format(new Date(item.date), "MMM dd") : null,
+                    date: item.date,
                     status: item.status || "EXPECTED",
                     type: 'receivable'
                 };
@@ -83,7 +88,6 @@ export function FinancialSchedule() {
     useEffect(() => {
         fetchData();
 
-        // Realtime subscription
         const sub = supabase.channel('schedule-updates')
             .on('postgres_changes', { event: '*', schema: 'public' }, fetchData)
             .subscribe();
@@ -93,13 +97,10 @@ export function FinancialSchedule() {
         }
     }, []);
 
-    // Placeholder interaction for checking off items (optimistic UI)
     const handleCheck = async (item: any) => {
         if (item.type === 'receivable') {
-            // NEW LOGIC: Insert NEW + Archive OLD
             if (!confirm("Mark as Received? This creates a new income entry.")) return;
 
-            // 1. Fetch original details
             const { data: original, error: fetchError } = await supabase
                 .from('income')
                 .select('*')
@@ -111,9 +112,6 @@ export function FinancialSchedule() {
                 return;
             }
 
-            // SPECIAL LOGIC FOR RETAINER INSTANCES
-            // If this item belongs to a retainer instance, we just update the status to match Retainer Detail Page behavior.
-            // We do NOT want to archive/create new, because that breaks the link to the generated milestone.
             if (original.retainer_instance_id) {
                 const { error: updateError } = await supabase
                     .from('income')
@@ -129,8 +127,6 @@ export function FinancialSchedule() {
                 return;
             }
 
-            // STANDARD LOGIC (Archive Old + Create New)
-            // 2. Insert NEW
             const { error: insertError } = await supabase.from('income').insert({
                 amount: original.amount,
                 description: original.description,
@@ -149,7 +145,6 @@ export function FinancialSchedule() {
                 return;
             }
 
-            // 3. Archive OLD
             const { error: archiveError } = await supabase
                 .from('income')
                 .update({
@@ -159,27 +154,19 @@ export function FinancialSchedule() {
                 .eq('id', item.id);
 
             if (archiveError) console.error("Error archiving:", archiveError);
-
-            // Sync Logic (Retainer)
-            // This block is now handled by the special logic above.
-            // If the old one is ARCHIVED, it is technically "done" for the schedule, but the retainer instance needs to know.
-
-            // Actually, if we archive the old one, the retainer instance might lose track if it sums up income.
-            // PROPOSAL: The NEW item should inherit `retainer_instance_id`.
-            // I will add `retainer_instance_id: original.retainer_instance_id` to the insert above.
-            // This comment block is now outdated due to the new logic.
-
             fetchData();
 
         } else {
-            // Expenses Logic (Simple Update for now, unless requested otherwise)
+            // Expenses Logic: Update to PAID, set paid_date, PRESERVE original date
             const { error } = await supabase.from('expenses').update({
                 status: 'PAID',
-                date: new Date().toISOString()
+                paid_date: format(new Date(), 'yyyy-MM-dd')
             }).eq('id', item.id);
 
-            if (error) console.error("Error updating expense:", error);
-            else fetchData();
+            if (error) {
+                console.error("Error updating expense:", error);
+                alert("Failed to update expense status.");
+            } else fetchData();
         }
     };
 
@@ -258,11 +245,13 @@ export function FinancialSchedule() {
                                         </span>
                                         <span className="text-[11px] text-zinc-500 flex items-center gap-1.5">
                                             {isReceiving ? item.project : item.service}
-                                            {!isCompleted && (
-                                                <>
-                                                    <span className="h-1 w-1 rounded-full bg-zinc-700" />
-                                                    <span className="text-zinc-400">Due {item.due}</span>
-                                                </>
+                                            <span className="h-1 w-1 rounded-full bg-zinc-700" />
+                                            {isCompleted ? (
+                                                <span className="text-orange-500/80 font-medium">
+                                                    {isReceiving ? "Received" : "Paid"} {item.paid_at}
+                                                </span>
+                                            ) : (
+                                                <span className="text-zinc-400">Due {item.due}</span>
                                             )}
                                         </span>
                                     </div>
@@ -279,7 +268,7 @@ export function FinancialSchedule() {
                                     <Badge variant="outline" className={cn(
                                         "text-[9px] px-1.5 py-0 h-4 border-0 mt-1 transition-all",
                                         isCompleted
-                                            ? "bg-orange-500/20 text-orange-500 font-bold"
+                                            ? isReceiving ? "bg-emerald-500/20 text-emerald-500 font-bold" : "bg-orange-500/20 text-orange-500 font-bold"
                                             : item.status === 'OVERDUE' || item.status === 'DELAYED'
                                                 ? "bg-red-500/20 text-red-500 font-bold"
                                                 : "bg-zinc-800 text-zinc-500"

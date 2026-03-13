@@ -66,7 +66,7 @@ export default function CampaignsPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6">
+        <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-6 pb-24 lg:pb-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Campaign Expenses</h1>

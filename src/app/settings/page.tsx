@@ -74,14 +74,14 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-8 py-12 space-y-12">
-            <div className="flex items-center gap-4 mb-12">
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-zinc-800 to-black border border-white/5 flex items-center justify-center shadow-2xl shadow-black/50">
-                    <Settings className="text-zinc-400" size={28} />
+        <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-8 sm:py-12 space-y-8 sm:space-y-12 pb-24 lg:pb-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 mb-8 sm:mb-12 text-center sm:text-left">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-zinc-800 to-black border border-white/5 flex items-center justify-center shadow-2xl shadow-black/50">
+                    <Settings className="text-zinc-400" size={24} />
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white">Settings</h1>
-                    <div className="flex items-center gap-2 text-sm text-zinc-500 mt-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Settings</h1>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-sm text-zinc-500 mt-1">
                         <span>System Configuration</span>
                         <ChevronRight size={12} />
                         <span>Preferences</span>
@@ -94,26 +94,26 @@ export default function SettingsPage() {
                 <Tabs defaultValue="data_controls" className="w-full lg:col-span-4 flex flex-col lg:flex-row gap-8">
 
                     {/* Sidebar Navigation Style Tabs List */}
-                    <TabsList className="flex lg:flex-col items-start justify-start w-full lg:w-64 h-auto bg-transparent p-0 gap-2">
+                    <TabsList className="flex lg:flex-col items-start justify-start w-full lg:w-64 h-auto bg-transparent p-0 gap-2 overflow-x-auto no-scrollbar pb-2 lg:pb-0">
                         <TabsTrigger
                             value="general"
-                            className="w-full justify-start px-4 py-3 rounded-xl data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500 data-[state=active]:border-orange-500/20 border border-transparent font-medium transition-all group"
+                            className="whitespace-nowrap lg:w-full justify-start px-4 py-2.5 sm:py-3 rounded-xl data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500 data-[state=active]:border-orange-500/20 border border-transparent font-medium transition-all group text-xs sm:text-sm"
                         >
-                            <ShieldCheck size={18} className="mr-3 text-zinc-500 group-data-[state=active]:text-orange-500 transition-colors" />
+                            <ShieldCheck size={16} className="mr-2 sm:mr-3 text-zinc-500 group-data-[state=active]:text-orange-500 transition-colors" />
                             General
                         </TabsTrigger>
                         <TabsTrigger
                             value="data_controls"
-                            className="w-full justify-start px-4 py-3 rounded-xl data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500 data-[state=active]:border-orange-500/20 border border-transparent font-medium transition-all group"
+                            className="whitespace-nowrap lg:w-full justify-start px-4 py-2.5 sm:py-3 rounded-xl data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500 data-[state=active]:border-orange-500/20 border border-transparent font-medium transition-all group text-xs sm:text-sm"
                         >
-                            <LayoutGrid size={18} className="mr-3 text-zinc-500 group-data-[state=active]:text-orange-500 transition-colors" />
+                            <LayoutGrid size={16} className="mr-2 sm:mr-3 text-zinc-500 group-data-[state=active]:text-orange-500 transition-colors" />
                             System Data
                         </TabsTrigger>
                         <TabsTrigger
                             value="backup"
-                            className="w-full justify-start px-4 py-3 rounded-xl data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500 data-[state=active]:border-orange-500/20 border border-transparent font-medium transition-all group"
+                            className="whitespace-nowrap lg:w-full justify-start px-4 py-2.5 sm:py-3 rounded-xl data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-500 data-[state=active]:border-orange-500/20 border border-transparent font-medium transition-all group text-xs sm:text-sm"
                         >
-                            <Database size={18} className="mr-3 text-zinc-500 group-data-[state=active]:text-orange-500 transition-colors" />
+                            <Database size={16} className="mr-2 sm:mr-3 text-zinc-500 group-data-[state=active]:text-orange-500 transition-colors" />
                             Backup & Restore
                         </TabsTrigger>
                     </TabsList>
@@ -123,17 +123,17 @@ export default function SettingsPage() {
 
                         <TabsContent value="general" className="mt-0 focus-visible:outline-none">
                             <Card className="bg-[#0e0e11] border-white/5 shadow-xl">
-                                <CardHeader className="p-8 pb-4">
-                                    <CardTitle>Organization Details</CardTitle>
-                                    <CardDescription>Configure how your organization appears in reports.</CardDescription>
+                                <CardHeader className="p-4 sm:p-8 pb-2 sm:pb-4">
+                                    <CardTitle className="text-lg sm:text-xl">Organization Details</CardTitle>
+                                    <CardDescription className="text-xs sm:text-sm">Configure how your organization appears in reports.</CardDescription>
                                 </CardHeader>
-                                <CardContent className="p-8 pt-4 space-y-4">
-                                    <div className="p-12 text-center border border-dashed border-white/10 rounded-xl">
+                                <CardContent className="p-4 sm:p-8 pt-4 space-y-4">
+                                    <div className="p-8 sm:p-12 text-center border border-dashed border-white/10 rounded-xl">
                                         <div className="h-10 w-10 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-3">
                                             <ShieldCheck size={20} className="text-zinc-500" />
                                         </div>
                                         <h3 className="text-sm font-medium text-white">Organization Settings Locked</h3>
-                                        <p className="text-xs text-zinc-500 mt-1">These settings are managed by your administrator.</p>
+                                        <p className="text-[11px] sm:text-xs text-zinc-500 mt-1">These settings are managed by your administrator.</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -149,15 +149,15 @@ export default function SettingsPage() {
 
                                 <Card className="bg-[#0e0e11] border-white/5 shadow-xl overflow-hidden rounded-2xl">
                                     <div className="p-1 bg-gradient-to-r from-orange-500/20 to-transparent opacity-20 h-1 w-full absolute top-0 left-0" />
-                                    <CardHeader className="p-8 pb-4">
+                                    <CardHeader className="p-4 sm:p-8 pb-2 sm:pb-4">
                                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                             <div className="space-y-1">
-                                                <CardTitle className="text-xl">System Values</CardTitle>
-                                                <CardDescription>Manage active categories and types.</CardDescription>
+                                                <CardTitle className="text-lg sm:text-xl">System Values</CardTitle>
+                                                <CardDescription className="text-xs sm:text-sm">Manage active categories and types.</CardDescription>
                                             </div>
                                             <div className="w-full md:w-[240px]">
                                                 <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                                                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-11 px-4">
+                                                    <SelectTrigger className="bg-white/5 border-white/10 text-white h-10 sm:h-11 px-4">
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent className="bg-[#16171D] border-white/10 text-white">
@@ -168,19 +168,19 @@ export default function SettingsPage() {
                                             </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-8 pt-2 space-y-5">
+                                    <CardContent className="p-4 sm:p-8 pt-2 space-y-5">
                                         {/* Add New Input */}
-                                        <div className="flex gap-4">
+                                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                                             <Input
                                                 placeholder={`Add new ${selectedGroup.replace('_', ' ')}...`}
-                                                className="bg-zinc-900/50 border-white/10 h-12 focus-visible:ring-orange-500/50"
+                                                className="bg-zinc-900/50 border-white/10 h-10 sm:h-12 focus-visible:ring-orange-500/50"
                                                 value={newOption}
                                                 onChange={(e) => setNewOption(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleAddOption()}
                                             />
                                             <Button
                                                 onClick={handleAddOption}
-                                                className="h-12 px-8 bg-orange-500 hover:bg-orange-600 text-white shadow-[0_0_15px_-3px_rgba(249,115,22,0.4)] transition-all active:scale-95 font-semibold"
+                                                className="h-10 sm:h-12 px-8 bg-orange-500 hover:bg-orange-600 text-white shadow-[0_0_15px_-3px_rgba(249,115,22,0.4)] transition-all active:scale-95 font-semibold w-full sm:w-auto"
                                             >
                                                 <Plus size={18} className="mr-2" /> Add
                                             </Button>
@@ -222,21 +222,21 @@ export default function SettingsPage() {
                                     <h2 className="text-xl font-bold text-white tracking-tight">Data Management</h2>
                                     <p className="text-sm text-zinc-500">Securely export or import your financial data.</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                     <Card className="bg-[#0e0e11] border-white/5 shadow-xl group hover:border-orange-500/20 transition-all cursor-default">
-                                        <CardHeader className="p-8 pb-4">
-                                            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                                                <Download size={24} className="text-emerald-500" />
+                                        <CardHeader className="p-6 sm:p-8 pb-2 sm:pb-4">
+                                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+                                                <Download size={22} className="text-emerald-500" />
                                             </div>
-                                            <CardTitle>Export JSON</CardTitle>
-                                            <CardDescription>Download a complete snapshot of your data.</CardDescription>
+                                            <CardTitle className="text-lg sm:text-xl">Export JSON</CardTitle>
+                                            <CardDescription className="text-xs sm:text-sm">Download a complete snapshot of your data.</CardDescription>
                                         </CardHeader>
-                                        <CardContent className="p-8 pt-2">
+                                        <CardContent className="p-6 sm:p-8 pt-2">
                                             <Button
                                                 onClick={handleExport}
                                                 disabled={isLoading}
                                                 variant="outline"
-                                                className="w-full h-12 border-white/10 bg-transparent hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 transition-all"
+                                                className="w-full h-10 sm:h-12 border-white/10 bg-transparent hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 transition-all text-sm"
                                             >
                                                 {isLoading ? "Generating..." : "Download Backup"}
                                             </Button>
@@ -244,18 +244,18 @@ export default function SettingsPage() {
                                     </Card>
 
                                     <Card className="bg-[#0e0e11] border-white/5 shadow-xl group hover:border-blue-500/20 transition-all cursor-default relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-3">
-                                            <div className="px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-500/20">Coming Soon</div>
+                                        <div className="absolute top-0 right-0 p-3 sm:p-3">
+                                            <div className="px-2 py-0.5 sm:py-1 rounded bg-blue-500/20 text-blue-400 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider border border-blue-500/20">Coming Soon</div>
                                         </div>
-                                        <CardHeader className="p-8 pb-4">
-                                            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
-                                                <Upload size={24} className="text-blue-500" />
+                                        <CardHeader className="p-6 sm:p-8 pb-2 sm:pb-4">
+                                            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-500">
+                                                <Upload size={22} className="text-blue-500" />
                                             </div>
-                                            <CardTitle>Import Data</CardTitle>
-                                            <CardDescription>Migrate data from other platforms via CSV.</CardDescription>
+                                            <CardTitle className="text-lg sm:text-xl">Import Data</CardTitle>
+                                            <CardDescription className="text-xs sm:text-sm">Migrate data from other platforms via CSV.</CardDescription>
                                         </CardHeader>
-                                        <CardContent className="p-8 pt-2">
-                                            <Button disabled className="w-full h-12 bg-white/5 border-dashed border-white/10 text-zinc-500">
+                                        <CardContent className="p-6 sm:p-8 pt-2">
+                                            <Button disabled className="w-full h-10 sm:h-12 bg-white/5 border-dashed border-white/10 text-zinc-500 text-sm">
                                                 Select File
                                             </Button>
                                         </CardContent>

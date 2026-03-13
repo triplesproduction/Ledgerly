@@ -31,45 +31,34 @@ export function UpcomingSection() {
                 .order('date', { ascending: false })
                 .limit(15);
 
-            // Fetch Expenses (Past/Paid only)
+            // Fetch Expenses (Recent PAID items)
             const { data: expenseData } = await supabase
                 .from('expenses')
-                .select('id, amount, description, category, date, payment_method')
-                .lte('date', format(new Date(), 'yyyy-MM-dd'))
+                .select('id, amount, description, category, date, paid_date, payment_method, status')
                 .eq('status', 'PAID')
-                .order('date', { ascending: false })
+                .order('paid_date', { ascending: false })
                 .limit(15);
 
             // Normalize and Combine
-            const formattedIncome = (incomeData || []).map(i => {
-                let clientName = "Unknown Income";
-                // Simple parsing if present
-                if (i.description && i.description.includes(":")) {
-                    clientName = i.description.split(":")[0];
-                } else {
-                    clientName = i.description || "Income";
-                }
-
-                return {
-                    id: i.id,
-                    name: clientName,
-                    type: "Income",
-                    amount: Number(i.amount),
-                    date: i.date,
-                    direction: "inbound" as const
-                };
-            });
+            const formattedIncome = (incomeData || []).map(i => ({
+                id: i.id,
+                name: i.description?.includes(":") ? i.description.split(":")[0] : (i.description || "Income"),
+                type: "Income",
+                amount: Number(i.amount),
+                date: i.date, // for income, date is the received date
+                direction: "inbound" as const
+            }));
 
             const formattedExpenses = (expenseData || []).map(e => ({
                 id: e.id,
                 name: e.description || "Expense",
                 type: "Expense",
                 amount: Number(e.amount),
-                date: e.date,
+                date: e.paid_date || e.date, // Prefer paid_date for display
                 direction: "outbound" as const
             }));
 
-            // Combine and sort by date descending
+            // Combine and sort by date descending (using the actual completion date)
             const all = [...formattedIncome, ...formattedExpenses].sort((a, b) =>
                 new Date(b.date).getTime() - new Date(a.date).getTime()
             );

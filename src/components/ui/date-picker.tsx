@@ -8,10 +8,12 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
 
 interface DatePickerProps extends React.HTMLAttributes<HTMLDivElement> {
     date?: Date | undefined
@@ -32,8 +34,8 @@ export function DatePicker({
     const [isOpen, setIsOpen] = React.useState(false)
 
     return (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
                 <Button
                     variant={"outline"}
                     className={cn(
@@ -45,35 +47,51 @@ export function DatePicker({
                     <CalendarIcon className="mr-2 h-4 w-4 text-orange-500" />
                     {date ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
                 </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-[#0c0c0e] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-3xl overflow-hidden !z-[100]" align="center" side="right" sideOffset={12} avoidCollisions={false}>
-                <div className="flex flex-col">
-                    <div className="p-4 border-b border-white/5 bg-[#111114] flex items-center justify-between px-6 py-5">
-                        <span className="text-xs font-bold text-white uppercase tracking-[0.2em]">Select Date</span>
-                        {date && (
-                            <span className="text-[10px] bg-orange-500/10 text-orange-500 px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-wider">
-                                {format(date, "MMM dd")}
-                            </span>
-                        )}
-                    </div>
+            </DialogTrigger>
+            <DialogContent className="p-0 border-0 bg-transparent shadow-none w-full max-w-[95vw] sm:max-w-fit flex items-center justify-center !z-[200]">
+                <div className="w-full sm:w-[350px] bg-[#0c0c0e] border border-white/5 shadow-[0_0_80px_rgba(0,0,0,0.9)] rounded-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex flex-col">
+                        <div className="p-4 border-b border-white/5 bg-[#111114] flex items-center justify-between px-6 py-5">
+                            <DialogHeader>
+                                <DialogTitle className="text-xs font-bold text-white uppercase tracking-[0.2em] text-left">
+                                    Select Date
+                                </DialogTitle>
+                            </DialogHeader>
+                            {date && (
+                                <span className="text-[10px] bg-orange-500/10 text-orange-500 px-3 py-1 rounded-full border border-orange-500/20 font-bold uppercase tracking-wider">
+                                    {format(date, "MMM dd")}
+                                </span>
+                            )}
+                        </div>
 
-                    <div className="p-4 flex items-center justify-center bg-[#0c0c0e]">
-                        <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={(newDate) => {
-                                if (newDate) {
-                                    setDate(newDate)
-                                    setIsOpen(false)
-                                }
-                            }}
-                            disabled={(date) => fromDate ? date < fromDate : false}
-                            initialFocus
-                            className="p-0"
-                        />
+                        <div className="p-4 flex items-center justify-center bg-[#0c0c0e]">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={(newDate) => {
+                                    if (newDate) {
+                                        setDate(newDate)
+                                        setIsOpen(false)
+                                    }
+                                }}
+                                disabled={(date) => fromDate ? date < fromDate : false}
+                                initialFocus
+                                className="p-0 scale-100 sm:scale-110"
+                            />
+                        </div>
+
+                        <div className="p-4 border-t border-white/5 bg-[#111114]/50 flex items-center justify-end gap-3 px-6">
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsOpen(false)}
+                                className="text-xs font-medium text-zinc-500 hover:text-white transition-colors h-9 px-4 rounded-xl hover:bg-white/5"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </PopoverContent>
-        </Popover>
+            </DialogContent>
+        </Dialog>
     )
 }

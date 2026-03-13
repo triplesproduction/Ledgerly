@@ -287,92 +287,92 @@ export default function ClientsPage() {
     const syncLTV = () => fetchClients();
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6">
+        <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-6 pb-24 lg:pb-6">
             <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-[28px] font-semibold tracking-tight text-foreground">Clients</h1>
                     <p className="text-muted-foreground mt-1 text-[13px]">Manage client relationships and track lifetime value.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                     <Button
                         variant="outline"
                         onClick={syncLTV}
-                        className="rounded-full border-white/10 hover:bg-white/5 text-[13px]"
+                        className="rounded-full border-white/10 hover:bg-white/5 text-[13px] w-full sm:w-auto order-2 sm:order-1"
                         disabled={isLoading}
                     >
                         <RefreshCw size={14} className={`mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                         Sync Values
                     </Button>
-                    <Button onClick={openAddModal} className="rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 px-6 font-semibold text-[13px]">
+                    <Button onClick={openAddModal} className="rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 px-6 font-semibold text-[13px] w-full sm:w-auto order-1 sm:order-2">
                         <Plus size={18} className="mr-2" /> Add Client
                     </Button>
                 </div>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20 overflow-x-auto">
-                <div className="relative flex-1 md:w-64">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20 overflow-hidden">
+                <div className="relative flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Search clients..."
-                        className="pl-9 bg-transparent border-none focus-visible:ring-0 h-9"
+                        className="pl-9 bg-transparent border-none focus-visible:ring-0 h-9 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="h-4 w-px bg-white/10 mx-1"></div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[130px] border-none bg-transparent focus:ring-0 text-xs">
-                        <div className="flex items-center gap-2">
-                            <Filter size={14} className="text-muted-foreground" />
-                            <span className="text-muted-foreground hidden sm:inline">Status:</span>
-                            <SelectValue />
-                        </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#16171D] border-white/10 text-white">
-                        <SelectItem value="All">All</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                        <SelectItem value="Lead">Lead</SelectItem>
-                    </SelectContent>
-                </Select>
 
-                <div className="h-4 w-px bg-white/10 mx-1 hidden md:block"></div>
+                <div className="flex flex-wrap items-center gap-2 md:gap-4 border-t md:border-t-0 md:border-l border-white/10 pt-3 md:pt-0 md:pl-4">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-full sm:w-[130px] border-none bg-white/5 sm:bg-transparent h-9 sm:h-auto px-3 sm:px-0 focus:ring-0 text-xs">
+                            <div className="flex items-center gap-2">
+                                <Filter size={14} className="text-muted-foreground" />
+                                <span className="text-muted-foreground">Status:</span>
+                                <SelectValue />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#16171D] border-white/10 text-white">
+                            <SelectItem value="All">All</SelectItem>
+                            <SelectItem value="Active">Active</SelectItem>
+                            <SelectItem value="Inactive">Inactive</SelectItem>
+                            <SelectItem value="Lead">Lead</SelectItem>
+                        </SelectContent>
+                    </Select>
 
-                {/* Industry Filter */}
-                <Select value={industryFilter} onValueChange={setIndustryFilter}>
-                    <SelectTrigger className="w-[140px] border-none bg-transparent focus:ring-0 text-xs">
-                        <div className="flex items-center gap-2">
-                            <Building size={14} className="text-muted-foreground" />
-                            <span className="text-muted-foreground hidden sm:inline">Industry:</span>
-                            <SelectValue />
-                        </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#16171D] border-white/10 text-white">
-                        <SelectItem value="All">All</SelectItem>
-                        {availableIndustries.map(ind => (
-                            <SelectItem key={ind} value={ind}>{ind}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                    <div className="hidden md:block h-4 w-px bg-white/10"></div>
 
-                <div className="h-4 w-px bg-white/10 mx-1 hidden md:block"></div>
+                    <Select value={industryFilter} onValueChange={setIndustryFilter}>
+                        <SelectTrigger className="w-full sm:w-[150px] border-none bg-white/5 sm:bg-transparent h-9 sm:h-auto px-3 sm:px-0 focus:ring-0 text-xs">
+                            <div className="flex items-center gap-2">
+                                <Building size={14} className="text-muted-foreground" />
+                                <span className="text-muted-foreground">Industry:</span>
+                                <SelectValue />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#16171D] border-white/10 text-white">
+                            <SelectItem value="All">All</SelectItem>
+                            {availableIndustries.map(ind => (
+                                <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                {/* Sort By */}
-                <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-[150px] border-none bg-transparent focus:ring-0 text-xs">
-                        <div className="flex items-center gap-2">
-                            <span className="text-muted-foreground hidden sm:inline">Sort:</span>
-                            <SelectValue />
-                        </div>
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#16171D] border-white/10 text-white">
-                        <SelectItem value="newest">Newest Added</SelectItem>
-                        <SelectItem value="value-high">Highest Value</SelectItem>
-                        <SelectItem value="value-low">Lowest Value</SelectItem>
-                        <SelectItem value="name-asc">Name (A-Z)</SelectItem>
-                    </SelectContent>
-                </Select>
+                    <div className="hidden md:block h-4 w-px bg-white/10"></div>
+
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-full sm:w-[160px] border-none bg-white/5 sm:bg-transparent h-9 sm:h-auto px-3 sm:px-0 focus:ring-0 text-xs">
+                            <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">Sort:</span>
+                                <SelectValue />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#16171D] border-white/10 text-white">
+                            <SelectItem value="newest">Newest Added</SelectItem>
+                            <SelectItem value="value-high">Highest Value</SelectItem>
+                            <SelectItem value="value-low">Lowest Value</SelectItem>
+                            <SelectItem value="name-asc">Name (A-Z)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {isLoading ? (

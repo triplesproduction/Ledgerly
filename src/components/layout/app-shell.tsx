@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         </Button>
                     </div>
                     {/* Page Content */}
-                    <div className="p-4 md:p-8">
+                    <div className="p-0 md:p-8">
                         {children}
                     </div>
                 </main>

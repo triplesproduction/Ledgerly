@@ -178,7 +178,7 @@ export default function ExpensesPageContent() {
     );
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6">
+        <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-6 pb-24 lg:pb-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Expenses</h1>
@@ -191,7 +191,7 @@ export default function ExpensesPageContent() {
                 />
             </div>
 
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
                 <div className="flex items-center gap-3 w-full lg:w-auto">
                     <div className="relative w-full lg:w-auto">
                         <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
