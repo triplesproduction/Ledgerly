@@ -4,234 +4,526 @@ import { useState, useEffect, Suspense, Fragment as Blank } from "react";
 import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Building2, TrendingUp, Calendar } from "lucide-react";
+import { 
+    Plus, 
+    Building2, 
+    Calendar, 
+    TrendingUp, 
+    ShoppingBag, 
+    History, 
+    ArrowRightLeft,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    ArrowUpRight,
+    ArrowDownRight,
+    IndianRupee,
+    Edit2,
+    Trash2,
+    MoreVertical
+} from "lucide-react";
 import { MonthFilter } from "@/components/ui/month-filter";
-import { startOfMonth, endOfMonth, startOfYear, endOfYear, format, isSameMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format, isSameMonth, subMonths, eachMonthOfInterval } from "date-fns";
 import { supabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
 import { AddOfficeExpenseDialog } from "@/components/expenses/add-office-expense-dialog";
-import { EditOfficeExpenseDialog } from "@/components/expenses/edit-office-expense-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FundsWithDad } from "@/components/expenses/funds-with-dad";
+import { PurchasePlanner } from "@/components/expenses/purchase-planner";
+import { LoanManagement } from "@/components/expenses/loan-management";
+import { Label } from "@/components/ui/label";
+import { ExpenseTrendChart, CategoryBreakdownChart } from "@/components/expenses/charts";
 
-const OFFICE_CATEGORIES = [
-    { value: "office_setup", label: "Office Setup" },
-    { value: "office_supplies", label: "Office Supplies" },
-    { value: "utilities", label: "Utilities" },
-    { value: "maintenance", label: "Maintenance" },
-    { value: "furniture", label: "Furniture" },
-    { value: "equipment", label: "Equipment" },
-    { value: "other", label: "Other" },
-];
+interface Category {
+    id: string;
+    name: string;
+    slug: string;
+}
 
 function formatCurrency(amount: number) {
-    return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+    return `₹${Math.abs(amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 }
 
 export default function OfficeExpensesPageContent() {
-    const [editingExpense, setEditingExpense] = useState<any | null>(null);
     const [expensesData, setExpensesData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [categoryFilter, setCategoryFilter] = useState("all");
-    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState("analytics");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const ITEMS_PER_PAGE = 15;
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [isAddingExpense, setIsAddingExpense] = useState(false);
+    const [isAddingPlan, setIsAddingPlan] = useState(false);
+    const [isAddingLoan, setIsAddingLoan] = useState(false);
+    const [editingExpense, setEditingExpense] = useState<any | null>(null);
+    const ITEMS_PER_PAGE = 50;
 
-    const [thisMonthTotal, setThisMonthTotal] = useState(0);
-    const [thisYearTotal, setThisYearTotal] = useState(0);
-    const [setupTotal, setSetupTotal] = useState(0);
+    // Metrics
+    const [metrics, setMetrics] = useState({
+        totalPeriodExpense: 0,
+        paidByYou: 0,
+        paidByDad: 0,
+        balanceWithDad: 0,
+        totalSentToDad: 0,
+        totalSpentByDad: 0,
+        totalBorrowed: 0,
+        totalRepaid: 0,
+    });
+
+    const [trendData, setTrendData] = useState<any[]>([]);
+    const [categoryData, setCategoryData] = useState<any[]>([]);
+    const [purchasePlans, setPurchasePlans] = useState<any[]>([]);
+    const [loans, setLoans] = useState<any[]>([]);
+    const [repayments, setRepayments] = useState<any[]>([]);
+    const [convertingPlan, setConvertingPlan] = useState<any | null>(null);
+    const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
 
     const searchParams = useSearchParams();
 
-    useEffect(() => {
-        const fetchPaymentMethods = async () => {
-            const { data } = await supabase.from('app_options').select('label, value').eq('group_name', 'payment_mode');
-            if (data && data.length > 0) {
-                setPaymentMethods(data);
-            } else {
-                setPaymentMethods([
-                    { label: 'Bank Transfer', value: 'bank' },
-                    { label: 'Credit Card', value: 'card' },
-                    { label: 'Cash', value: 'cash' },
-                    { label: 'UPI', value: 'upi' }
-                ]);
-            }
-        };
-        fetchPaymentMethods();
-    }, []);
-
-    const fetchMetrics = async () => {
-        const now = new Date();
-        const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
-        const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
-        const yearStart = format(startOfYear(now), 'yyyy-MM-dd');
-        const yearEnd = format(endOfYear(now), 'yyyy-MM-dd');
-
-        const { data: monthData } = await supabase.from('expenses').select('amount').eq('expense_type', 'office').gte('date', monthStart).lte('date', monthEnd).eq('status', 'PAID');
-        setThisMonthTotal(monthData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0);
-
-        const { data: yearData } = await supabase.from('expenses').select('amount').eq('expense_type', 'office').gte('date', yearStart).lte('date', yearEnd).eq('status', 'PAID');
-        setThisYearTotal(yearData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0);
-
-        const { data: setupData } = await supabase.from('expenses').select('amount').eq('expense_type', 'office').eq('category', 'office_setup').eq('status', 'PAID');
-        setSetupTotal(setupData?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0);
-    };
-
-    const fetchExpenses = async () => {
+    const fetchAllData = async () => {
         setIsLoading(true);
         const fromParam = searchParams?.get('from');
         const toParam = searchParams?.get('to');
         const now = new Date();
-        const from = fromParam ? new Date(fromParam) : startOfMonth(now);
+        
+        const fromDate = fromParam ? new Date(fromParam) : startOfMonth(subMonths(now, 5));
         const toDate = toParam ? new Date(toParam) : endOfMonth(now);
 
-        if (isNaN(from.getTime()) || isNaN(toDate.getTime())) { setIsLoading(false); return; }
+        const { data: catData } = await supabase.from('office_categories').select('*').order('name');
+        if (catData) setCategories(catData);
 
-        const fromStr = format(from, 'yyyy-MM-dd');
+        const fromStr = format(fromDate, 'yyyy-MM-dd');
         const toStr = format(toDate, 'yyyy-MM-dd');
+
+        // 1. Fetch Expenses (Filtered for Ledger)
         const offset = (page - 1) * ITEMS_PER_PAGE;
         const limit = offset + ITEMS_PER_PAGE - 1;
-
-        let query = supabase.from('expenses').select('*', { count: 'exact' }).eq('expense_type', 'office').gte('date', fromStr).lte('date', toStr);
-        if (categoryFilter !== 'all') query = query.eq('category', categoryFilter);
-
-        const isCurrentMonth = isSameMonth(new Date(), from);
-        const { data, count } = await query.order('date', { ascending: !isCurrentMonth }).range(offset, limit);
+        
+        let tableQuery = supabase.from('expenses').select('*', { count: 'exact' }).ilike('expense_type', 'office_%');
+        if (categoryFilter !== 'all') {
+            tableQuery = tableQuery.eq('category', categoryFilter);
+        }
+        
+        const { data: expenses, count } = await tableQuery.order('date', { ascending: false }).range(offset, limit);
         if (count !== null) setTotalPages(Math.ceil(count / ITEMS_PER_PAGE) || 1);
-        if (data) setExpensesData(data);
+        if (expenses) setExpensesData(expenses);
+
+        // 2. Fetch All Data for Analytics
+        const { data: allExpenses } = await supabase.from('expenses').select('amount, expense_type, date, category').ilike('expense_type', 'office_%');
+        const { data: allTransfers } = await supabase.from('fund_transfers').select('amount, from_person, to_person, date');
+        const { data: allLoans } = await supabase.from('loans').select('amount_received, date');
+        const { data: allLoanRepayments } = await supabase.from('loan_repayments').select('amount_paid, date');
+
+        // 3. Process Charts & Metrics
+        let periodTotal = 0;
+        let paidYou = 0;
+        let paidDad = 0;
+        let spentByDad = 0;
+
+        // Group by Month for Trend
+        const months = eachMonthOfInterval({ start: startOfMonth(subMonths(now, 5)), end: endOfMonth(now) });
+        const monthlyMap: Record<string, number> = {};
+        months.forEach(m => monthlyMap[format(m, 'MMM')] = 0);
+
+        // Group by Category
+        const categoryMap: Record<string, number> = {};
+
+        allExpenses?.forEach(exp => {
+            const amt = Number(exp.amount);
+            periodTotal += amt;
+            const paidBy = exp.expense_type === 'office_dad' ? 'Dad' : 'You';
+            if (paidBy === 'You') paidYou += amt;
+            if (paidBy === 'Dad') {
+                paidDad += amt;
+                spentByDad += amt;
+            }
+
+            const mName = format(new Date(exp.date), 'MMM');
+            if (monthlyMap[mName] !== undefined) monthlyMap[mName] += amt;
+
+            categoryMap[exp.category] = (categoryMap[exp.category] || 0) + amt;
+        });
+
+        setTrendData(Object.entries(monthlyMap).map(([name, amount]) => ({ name, amount })));
+        setCategoryData(Object.entries(categoryMap).map(([name, value]) => ({ 
+            name: categories.find(c => c.slug === name)?.name || name, 
+            value 
+        })));
+
+        let sentToDadTotal = 0;
+        allTransfers?.forEach(tr => {
+            if (tr.from_person === 'You' && tr.to_person === 'Dad') sentToDadTotal += Number(tr.amount);
+        });
+
+        let borrowedTotal = 0;
+        let repaidTotal = 0;
+        allLoans?.forEach(l => { borrowedTotal += Number(l.amount_received); });
+        allLoanRepayments?.forEach(r => { repaidTotal += Number(r.amount_paid); });
+
+        setMetrics({
+            totalPeriodExpense: periodTotal,
+            paidByYou: paidYou,
+            paidByDad: paidDad,
+            totalSentToDad: sentToDadTotal,
+            totalSpentByDad: spentByDad,
+            balanceWithDad: sentToDadTotal - spentByDad,
+            totalBorrowed: borrowedTotal,
+            totalRepaid: repaidTotal,
+        });
+
+        // 4. Other stuff
+        const { data: pmData } = await supabase.from('app_options').select('label, value').eq('group_name', 'payment_mode');
+        if (pmData) setPaymentMethods(pmData);
+
+        const { data: plans } = await supabase.from('purchase_plans').select('*').order('created_at', { ascending: false });
+        if (plans) setPurchasePlans(plans);
+
+        const { data: loansData } = await supabase.from('loans').select('*').order('date', { ascending: false });
+        if (loansData) setLoans(loansData);
+
+        const { data: repaymentsData } = await supabase.from('loan_repayments').select('*').order('date', { ascending: false });
+        if (repaymentsData) setRepayments(repaymentsData);
+
         setIsLoading(false);
     };
 
-    useEffect(() => { fetchMetrics(); }, []);
-
     useEffect(() => {
-        fetchExpenses();
-        const subscription = supabase.channel('public:office_expenses').on('postgres_changes', { event: '*', schema: 'public', table: 'expenses', filter: "expense_type=eq.office" }, () => {
-            fetchExpenses(); fetchMetrics();
-        }).subscribe();
-        return () => { supabase.removeChannel(subscription); };
-    }, [page, categoryFilter, searchParams]);
+        fetchAllData();
+        const subs = [
+            supabase.channel('office_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, fetchAllData).subscribe(),
+            supabase.channel('transfer_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'fund_transfers' }, fetchAllData).subscribe(),
+            supabase.channel('plan_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'purchase_plans' }, fetchAllData).subscribe(),
+            supabase.channel('loan_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'loans' }, fetchAllData).subscribe(),
+            supabase.channel('repay_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'loan_repayments' }, fetchAllData).subscribe()
+        ];
+        return () => { subs.forEach(s => supabase.removeChannel(s)); };
+    }, [categoryFilter, page]);
+
+    const handleDeleteExpense = async (expenseId: string) => {
+        if (!confirm("Are you sure you want to delete this expense?")) return;
+        
+        try {
+            const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+            if (error) throw error;
+            fetchAllData();
+        } catch (err: any) {
+            alert("Error deleting: " + err.message);
+        }
+    };
+
+    const handleConvertToExpense = (plan: any) => {
+        setConvertingPlan(plan);
+        setActiveTab("expenses");
+    };
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans px-3 py-6 sm:p-6 pb-24 lg:pb-6 space-y-8">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 space-y-8 max-w-[1600px] mx-auto pb-32 lg:pb-12">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                        <Building2 className="text-orange-500 h-8 w-8" /> Office Expenses
+                    <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+                        <Building2 className="text-orange-500 h-8 w-8" /> Office Control
                     </h1>
-                    <p className="text-muted-foreground mt-1">Track internal operational and setup costs.</p>
+                    <p className="text-sm text-zinc-500 font-medium mt-1">Premium management for internal operations and cash handling.</p>
                 </div>
-                <AddOfficeExpenseDialog paymentMethods={paymentMethods} onSuccess={() => { fetchExpenses(); fetchMetrics(); }} />
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card className="bg-card/50 border-white/5 shadow-2xl backdrop-blur-sm relative overflow-hidden group">
-                    <CardHeader className="flex flex-row items-center justify-between pt-6 px-6 pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4 text-orange-500" />This Month</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-6 pb-6"><div className="text-3xl font-bold text-white tracking-tight">{formatCurrency(thisMonthTotal)}</div></CardContent>
-                </Card>
-                <Card className="bg-card/50 border-white/5 shadow-2xl backdrop-blur-sm relative overflow-hidden group">
-                    <CardHeader className="flex flex-row items-center justify-between pt-6 px-6 pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-500" />This Year</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-6 pb-6"><div className="text-3xl font-bold text-white tracking-tight">{formatCurrency(thisYearTotal)}</div></CardContent>
-                </Card>
-                <Card className="bg-card/50 border-white/5 shadow-2xl backdrop-blur-sm relative overflow-hidden group">
-                    <CardHeader className="flex flex-row items-center justify-between pt-6 px-6 pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-500" />Total Setup Cost</CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-6 pb-6"><div className="text-3xl font-bold text-white tracking-tight">{formatCurrency(setupTotal)}</div><p className="text-xs text-muted-foreground mt-1">All-time office setup</p></CardContent>
-                </Card>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20 overflow-hidden">
-                <select
-                    className="bg-white/5 border-none text-sm text-foreground h-10 rounded-xl px-4 outline-none appearance-none w-full sm:w-auto sm:min-w-[150px] cursor-pointer"
-                    value={categoryFilter}
-                    onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-                >
-                    <option value="all" className="bg-[#121217]">All Categories</option>
-                    {OFFICE_CATEGORIES.map(c => (<option key={c.value} value={c.value} className="bg-[#121217]">{c.label}</option>))}
-                </select>
-                <div className="h-px w-full sm:h-4 sm:w-px bg-white/10 my-1 sm:my-0"></div>
-                <div className="flex-1 overflow-x-auto custom-scrollbar-hidden py-1">
-                    <Suspense fallback={<div className="h-10 w-64 bg-white/5 rounded-xl animate-pulse" />}>
-                        <MonthFilter />
-                    </Suspense>
+                <div className="flex items-center gap-4">
                 </div>
             </div>
 
-            <div className="rounded-2xl border border-white/5 bg-card shadow-2xl overflow-x-auto custom-scrollbar">
-                <Table className="min-w-[800px]">
-                    <TableHeader className="bg-white/5 hover:bg-white/5">
-                        <TableRow className="border-white/5">
-                            <TableHead className="w-[120px] text-xs font-bold uppercase tracking-wider text-muted-foreground pl-6">Date</TableHead>
-                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Item</TableHead>
-                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</TableHead>
-                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Paid To</TableHead>
-                            <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Mode</TableHead>
-                            <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</TableHead>
-                            <TableHead className="w-[80px]"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">Loading expenses...</TableCell></TableRow>
-                        ) : expensesData.length === 0 ? (
-                            <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No office expenses found for this period.</TableCell></TableRow>
-                        ) : (
-                            Object.entries(
-                                (expensesData || []).reduce((acc: any, item) => {
-                                    const dateObj = new Date(item.date);
-                                    if (isNaN(dateObj.getTime())) return acc;
-                                    const monthKey = format(dateObj, "MMMM");
-                                    if (!acc[monthKey]) acc[monthKey] = [];
-                                    acc[monthKey].push(item);
-                                    return acc;
-                                }, {})
-                            ).map(([month, items]: [string, any]) => (
-                                <Blank key={month}>
-                                    <TableRow className="bg-white/[0.02] border-white/5 pointer-events-none">
-                                        <TableCell colSpan={7} className="py-2 pl-6">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500/60 bg-orange-500/5 px-2 py-0.5 rounded-md border border-orange-500/10">{month}</span>
-                                                <div className="h-px flex-1 bg-gradient-to-r from-white/5 to-transparent"></div>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                    {items.map((item: any) => (
-                                        <TableRow key={item.id} className="border-white/5 hover:bg-white/5 group transition-colors">
-                                            <TableCell className="font-medium text-foreground/80 pl-6 whitespace-nowrap">{format(new Date(item.date), "MMM dd, yyyy")}</TableCell>
-                                            <TableCell className="font-semibold text-foreground">{item.description}</TableCell>
-                                            <TableCell>
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-white/5 text-zinc-400 border border-white/10 uppercase whitespace-nowrap">
-                                                    {OFFICE_CATEGORIES.find(c => c.value === item.category)?.label || item.category}
+            {/* Tab Navigation */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
+                <div className="flex items-center justify-between">
+                    <TabsList className="bg-zinc-900/50 border border-white/5 p-1 rounded-2xl h-12">
+                        <TabsTrigger value="analytics" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Analytics</TabsTrigger>
+                        <TabsTrigger value="expenses" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Expenses</TabsTrigger>
+                        <TabsTrigger value="planner" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Planner</TabsTrigger>
+                        <TabsTrigger value="loans" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Loans</TabsTrigger>
+                    </TabsList>
+
+                    <div className="flex items-center gap-4">
+                        {activeTab === 'analytics' && (
+                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-5 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Expense</span>
+                                <span className="text-sm font-black text-white tabular-nums">
+                                    {formatCurrency(metrics.totalPeriodExpense).replace('.00', '')}
+                                </span>
+                            </div>
+                        )}
+                        {activeTab === 'planner' && (
+                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-5 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Required</span>
+                                <span className="text-sm font-black text-white tabular-nums">
+                                    {formatCurrency(purchasePlans.filter(p => p.status === 'Planned').reduce((acc, curr) => acc + Number(curr.estimated_cost), 0)).replace('.00', '')}
+                                </span>
+                            </div>
+                        )}
+                        {(activeTab === 'expenses' || activeTab === 'analytics') && (
+                            <AddOfficeExpenseDialog 
+                                paymentMethods={paymentMethods} 
+                                categories={categories}
+                                onSuccess={fetchAllData} 
+                                initialData={editingExpense || convertingPlan}
+                                open={!!(editingExpense || convertingPlan || isAddingExpense)}
+                                onOpenChange={(open) => {
+                                    if (!open) {
+                                        setConvertingPlan(null);
+                                        setEditingExpense(null);
+                                        setIsAddingExpense(false);
+                                    } else {
+                                        setIsAddingExpense(true);
+                                    }
+                                }}
+                            />
+                        )}
+                        {activeTab === 'planner' && (
+                            <Button 
+                                onClick={() => setIsAddingPlan(true)}
+                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 px-6 gap-2 font-bold shadow-lg shadow-orange-500/20"
+                            >
+                                <Plus size={18} /> New Planned Purchase
+                            </Button>
+                        )}
+                        {activeTab === 'loans' && (
+                            <Button 
+                                onClick={() => setIsAddingLoan(true)}
+                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 px-6 gap-2 font-bold shadow-lg shadow-orange-500/20"
+                            >
+                                <Plus size={18} /> Record New Loan
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                {/* --- Analytics Tab --- */}
+                <TabsContent value="analytics" className="space-y-8 outline-none mt-0">
+                    {/* Top Summary Metrics - Premium Grid Layout */}
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+                        
+                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-emerald-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors">
+                                    <TrendingUp className="text-emerald-500 h-5 w-5" />
+                                </div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-emerald-500/80 transition-colors">Spent By You</p>
+                            </div>
+                            <p className="text-3xl font-bold text-emerald-500 tracking-tight mt-6">
+                                {formatCurrency(metrics.paidByYou).replace('.00', '')}
+                                <span className="text-base opacity-40">.00</span>
+                            </p>
+                        </Card>
+
+                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-orange-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-orange-500/10 rounded-xl group-hover:bg-orange-500/20 transition-colors">
+                                    <History className="text-orange-500 h-5 w-5" />
+                                </div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-orange-500/80 transition-colors">Spent By Dad</p>
+                            </div>
+                            <p className="text-3xl font-bold text-orange-500 tracking-tight mt-6">
+                                {formatCurrency(metrics.paidByDad).replace('.00', '')}
+                                <span className="text-base opacity-40">.00</span>
+                            </p>
+                        </Card>
+
+                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-blue-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-colors">
+                                    <Building2 className="text-blue-500 h-5 w-5" />
+                                </div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-blue-500/80 transition-colors">Dad Balance</p>
+                            </div>
+                            <p className="text-3xl font-bold text-blue-500 tracking-tight mt-6">
+                                {formatCurrency(metrics.balanceWithDad).replace('.00', '')}
+                                <span className="text-base opacity-40">.00</span>
+                            </p>
+                        </Card>
+
+                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-rose-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-rose-500/10 rounded-xl group-hover:bg-rose-500/20 transition-colors">
+                                    <ArrowRightLeft className="text-rose-500 h-5 w-5" />
+                                </div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-rose-500/80 transition-colors">Loans Net</p>
+                            </div>
+                            <p className="text-3xl font-bold text-rose-500 tracking-tight mt-6">
+                                {formatCurrency(metrics.totalBorrowed - metrics.totalRepaid).replace('.00', '')}
+                                <span className="text-base opacity-40">.00</span>
+                            </p>
+                        </Card>
+                    </div>
+
+                    {/* Charts Grid */}
+                    <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                        <Card className="rounded-2xl border border-white/5 bg-card p-6 shadow-2xl backdrop-blur-md">
+                            <h3 className="text-lg font-medium text-white mb-6 flex items-center gap-2">
+                                <TrendingUp className="text-orange-500 h-5 w-5" /> Spending Trend
+                            </h3>
+                            <ExpenseTrendChart data={trendData} />
+                        </Card>
+                        <Card className="rounded-2xl border border-white/5 bg-card p-6 shadow-2xl backdrop-blur-md">
+                            <h3 className="text-lg font-medium text-white mb-6 flex items-center gap-2">
+                                <ShoppingBag className="text-blue-500 h-5 w-5" /> Category Breakdown
+                            </h3>
+                            <CategoryBreakdownChart data={categoryData} />
+                        </Card>
+                    </div>
+
+                    {/* Funds Management Area */}
+                    <div className="grid gap-6 grid-cols-1 xl:grid-cols-12 items-start">
+                        <div className="xl:col-span-8">
+                            <FundsWithDad 
+                                balance={metrics.balanceWithDad} 
+                                totalSent={metrics.totalSentToDad}
+                                totalSpent={metrics.totalSpentByDad}
+                                onSuccess={fetchAllData} 
+                            />
+                        </div>
+                        <div className="xl:col-span-4">
+                            <Card className="rounded-2xl border border-white/5 bg-card p-6 shadow-2xl backdrop-blur-md h-full">
+                                <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <TrendingUp className="text-emerald-500 h-4 w-4" /> System Health
+                                </h3>
+                                <div className="space-y-6">
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Gross Internal Debt</p>
+                                        <p className="text-xl font-bold text-white italic">{formatCurrency(metrics.totalBorrowed)}</p>
+                                    </div>
+                                    <div className="pt-6 border-t border-white/5">
+                                        <p className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider mb-1">Operational Capacity</p>
+                                        <p className="text-sm text-zinc-300 leading-relaxed italic">All internal ledgers are balanced daily. Settle "Dad Balance" before quarter-end to maintain clean reporting.</p>
+                                    </div>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                </TabsContent>
+
+                {/* --- Expenses Tab --- */}
+                <TabsContent value="expenses" className="space-y-6 outline-none mt-0">
+                    <Card className="p-4 rounded-2xl border border-white/5 bg-zinc-900/10 backdrop-blur-sm overflow-hidden">
+                        <div className="flex items-center gap-4 overflow-x-auto pb-4 scroll-smooth">
+                            <button 
+                                onClick={() => setCategoryFilter('all')}
+                                className={cn(
+                                    "px-6 py-2 rounded-xl text-[10px] font-bold uppercase transition-all flex-shrink-0 border border-white/5",
+                                    categoryFilter === 'all' ? "bg-orange-600 text-white border-orange-600/20 shadow-lg shadow-orange-500/10" : "bg-white/5 text-zinc-500 hover:text-white"
+                                )}
+                            >
+                                All
+                            </button>
+                            {categories.map(cat => (
+                                <button 
+                                    key={cat.id}
+                                    onClick={() => setCategoryFilter(cat.slug)}
+                                    className={cn(
+                                        "px-6 py-2 rounded-xl text-[10px] font-bold uppercase transition-all flex-shrink-0 border border-white/5",
+                                        categoryFilter === cat.slug ? "bg-orange-600 text-white border-orange-600/20 shadow-lg shadow-orange-500/10" : "bg-white/5 text-zinc-500 hover:text-white"
+                                    )}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card className="rounded-2xl border border-white/5 bg-card overflow-hidden shadow-2xl">
+                        <Table>
+                            <TableHeader className="bg-white/[0.02]">
+                                <TableRow className="border-white/5 hover:bg-transparent">
+                                    <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 pl-8">Item</TableHead>
+                                    <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 px-4 w-[180px]">Vendor</TableHead>
+                                    <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 px-4 w-[180px]">Category</TableHead>
+                                    <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 px-4 text-center w-[120px]">Paid By</TableHead>
+                                    <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 px-4 text-right w-[150px]">Amount</TableHead>
+                                    <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 px-4 text-right w-[150px]">Date</TableHead>
+                                    <TableHead className="w-[80px] pr-8"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow><TableCell colSpan={7} className="h-64 text-center text-zinc-500 italic">Initializing ledger...</TableCell></TableRow>
+                                ) : expensesData.length === 0 ? (
+                                    <TableRow><TableCell colSpan={7} className="h-64 text-center text-zinc-500 italic font-medium">No transactions recorded yet.</TableCell></TableRow>
+                                ) : (
+                                    expensesData.map((exp) => (
+                                        <TableRow key={exp.id} className="border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                            <TableCell className="pl-8 py-5">
+                                                <div className="font-semibold text-white text-sm truncate max-w-[250px]">{exp.description}</div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-5">
+                                                <span className="bg-zinc-500/10 text-zinc-400 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.05em] border border-white/5 truncate max-w-[150px] inline-block">
+                                                    {exp.vendor || 'Direct'}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="text-foreground/80">{item.vendor || "-"}</TableCell>
-                                            <TableCell className="text-foreground/80 uppercase text-xs">{item.payment_method}</TableCell>
-                                            <TableCell className="text-right font-bold text-foreground">{formatCurrency(Number(item.amount))}</TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white" onClick={() => setEditingExpense(item)}><Pencil size={14} /></Button>
+                                            <TableCell className="px-4 py-5">
+                                                <span className="bg-white/5 text-zinc-300 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase border border-white/5 truncate max-w-[150px] inline-block">
+                                                    {categories.find(c => c.slug === exp.category)?.name || exp.category.replace('_', ' ')}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-5 text-center">
+                                                <div className={cn("text-xs font-bold px-3 py-1.5 rounded-lg mx-auto w-fit", exp.expense_type === 'office_you' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/10" : "bg-orange-500/10 text-orange-500 border border-orange-500/10")}>
+                                                    {exp.expense_type === 'office_dad' ? 'Dad' : 'You'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="px-4 py-5 font-bold text-white text-[15px] italic tabular-nums text-right">{formatCurrency(exp.amount)}</TableCell>
+                                            <TableCell className="px-4 py-5 text-xs text-zinc-500 font-medium text-right">{format(new Date(exp.date), "dd MMM, yyyy")}</TableCell>
+                                            <TableCell className="pr-8 py-5 text-right w-[80px]">
+                                                <div className="flex items-center justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-9 w-9 text-zinc-500 hover:text-white hover:bg-white/10 rounded-xl"
+                                                        onClick={() => {
+                                                            setEditingExpense(exp);
+                                                            setIsAddingExpense(true);
+                                                        }}
+                                                    >
+                                                        <Edit2 size={15} />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
-                                    ))}
-                                </Blank>
-                            ))
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                        {totalPages > 1 && (
+                            <div className="p-6 border-t border-white/5 flex items-center justify-between text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                                <div>Page {page} of {totalPages}</div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="h-9 border-white/5 bg-white/5 rounded-xl hover:bg-white/10 px-5">Prev</Button>
+                                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-9 border-white/5 bg-white/5 rounded-xl hover:bg-white/10 px-5">Next</Button>
+                                </div>
+                            </div>
                         )}
-                    </TableBody>
-                </Table>
-            </div>
+                    </Card>
+                </TabsContent>
 
-            <div className="flex items-center justify-between mt-4">
-                <div className="text-xs text-muted-foreground">Page {page} of {totalPages}</div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="h-8 border-white/10 bg-white/5 hover:bg-white/10">Previous</Button>
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="h-8 border-white/10 bg-white/5 hover:bg-white/10">Next</Button>
-                </div>
-            </div>
+                {/* --- Planner Tab --- */}
+                <TabsContent value="planner" className="outline-none mt-0">
+                    <PurchasePlanner 
+                        plans={purchasePlans} 
+                        onSuccess={fetchAllData} 
+                        onConvertToExpense={handleConvertToExpense}
+                        open={isAddingPlan}
+                        onOpenChange={setIsAddingPlan}
+                    />
+                </TabsContent>
 
-            <EditOfficeExpenseDialog open={!!editingExpense} onOpenChange={(open) => !open && setEditingExpense(null)} expense={editingExpense} paymentMethods={paymentMethods} onSuccess={() => { fetchExpenses(); fetchMetrics(); }} />
+                {/* --- Loans Tab --- */}
+                <TabsContent value="loans" className="outline-none mt-0">
+                    <LoanManagement 
+                        loans={loans} 
+                        repayments={repayments} 
+                        onSuccess={fetchAllData}
+                        isAddingLoan={isAddingLoan}
+                        onAddingLoanChange={setIsAddingLoan}
+                    />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

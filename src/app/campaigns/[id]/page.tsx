@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddCampaignExpenseDialog } from "@/components/campaigns/add-campaign-expense-dialog";
 import { EditCampaignDialog } from "@/components/campaigns/edit-campaign-dialog";
+import { CategoryDetailDialog } from "@/components/campaigns/category-detail-dialog";
 import type { Campaign, CampaignExpense } from "@/types/general";
 import React from "react";
 
@@ -22,6 +23,7 @@ export default function CampaignDetailsPage() {
     const [campaign, setCampaign] = useState<Campaign | null>(null);
     const [expenses, setExpenses] = useState<CampaignExpense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     const fetchCampaignData = async () => {
         setIsLoading(true);
@@ -81,6 +83,22 @@ export default function CampaignDetailsPage() {
     };
 
     const categoriesList = ['Travel', 'Accommodation', 'Food', 'Other Expense'];
+
+
+    // Dynamic icon lookup for the dialog
+    const getIconForCategory = (cat: string) => {
+        return categoryIcons[cat] || <Package size={24} className="text-zinc-500" />;
+    };
+
+    // Budget allocation lookup
+    const getAllocatedForCategory = (cat: string) => {
+        if (!campaign) return 0;
+        if (cat === 'Travel') return campaign.budget_travel || 0;
+        if (cat === 'Accommodation') return campaign.budget_accommodation || 0;
+        if (cat === 'Food') return campaign.budget_food || 0;
+        if (cat === 'Other Expense') return campaign.budget_other_expense || 0;
+        return 0;
+    };
 
     return (
         <div className="min-h-screen bg-transparent text-foreground font-sans p-6 pb-24 lg:pb-6">
@@ -160,37 +178,35 @@ export default function CampaignDetailsPage() {
             </div>
 
             {/* Parameter Breakdown */}
-            <h2 className="text-xl font-bold mb-4">Budget Breakdown</h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Budget Breakdown</h2>
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Click cards for details</span>
+            </div>
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 {categoriesList.map(cat => {
                     const amountDisp = breakdown[cat] || 0;
-
-                    // Maps category name to campaign allocation column
-                    let allocated = 0;
-                    if (cat === 'Travel') allocated = campaign.budget_travel || 0;
-                    if (cat === 'Accommodation') allocated = campaign.budget_accommodation || 0;
-                    if (cat === 'Food') allocated = campaign.budget_food || 0;
-                    if (cat === 'Other Expense') allocated = campaign.budget_other_expense || 0;
-
+                    let allocated = getAllocatedForCategory(cat);
                     const percentage = totalSpent > 0 ? ((amountDisp / totalSpent) * 100).toFixed(1) : 0;
-
-                    // Specific Progress logic if allocation exists
                     const hasAllocation = allocated > 0;
-                    let capPercentage = 0;
-                    if (hasAllocation) {
-                        capPercentage = Math.min(100, (amountDisp / allocated) * 100);
-                    }
+                    let capPercentage = hasAllocation ? Math.min(100, (amountDisp / allocated) * 100) : 0;
 
                     return (
-                        <div key={cat} className="bg-card border border-white/5 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                        <button 
+                            key={cat} 
+                            onClick={() => setSelectedCategory(cat)}
+                            className="bg-card border border-white/5 rounded-2xl p-5 shadow-lg flex flex-col justify-between text-left transition-all hover:bg-white/[0.04] hover:border-orange-500/20 active:scale-[0.98] group"
+                        >
                             <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-orange-500/10 transition-colors">
                                     {categoryIcons[cat]}
                                 </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{cat}</p>
-                                    <div className="flex items-baseline gap-1 mt-1 font-bold text-lg text-white">
-                                        <IndianRupee size={14} className="text-zinc-500" />
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{cat}</p>
+                                    </div>
+                                    <div className="flex items-baseline gap-1 mt-1 font-bold text-lg text-white group-hover:text-orange-500 transition-colors">
+                                        <IndianRupee size={14} className="text-zinc-500 group-hover:text-orange-500/50" />
                                         {amountDisp.toLocaleString("en-IN", { minimumFractionDigits: 0 })}
                                     </div>
                                     <span className="text-[10px] text-zinc-500">{percentage}% of total</span>
@@ -200,23 +216,35 @@ export default function CampaignDetailsPage() {
                             {hasAllocation && (
                                 <div className="mt-4 pt-4 border-t border-white/5">
                                     <div className="flex justify-between items-end mb-1">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Limit</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Allocation</span>
                                         <span className="text-xs font-semibold flex items-center text-zinc-300">
-                                            ₹{allocated.toLocaleString("en-IN")}
+                                            ₹{(allocated / 1000).toFixed(1)}k
                                         </span>
                                     </div>
                                     <div className="w-full bg-white/5 rounded-full h-1 overflow-hidden">
                                         <div
-                                            className={`h-1 rounded-full ${capPercentage >= 100 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                                            className={`h-1 rounded-full transition-all duration-500 ${capPercentage >= 100 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                                             style={{ width: `${capPercentage}%` }}
                                         ></div>
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </button>
                     );
                 })}
             </div>
+
+            {/* Category Detail Dialog */}
+            {selectedCategory && (
+                <CategoryDetailDialog 
+                    isOpen={!!selectedCategory}
+                    onClose={() => setSelectedCategory(null)}
+                    category={selectedCategory}
+                    expenses={expenses.filter(e => e.category === selectedCategory)}
+                    allocated={getAllocatedForCategory(selectedCategory)}
+                    icon={getIconForCategory(selectedCategory)}
+                />
+            )}
 
             {/* Expenses Table */}
             <h2 className="text-xl font-bold mb-4">Expense History</h2>

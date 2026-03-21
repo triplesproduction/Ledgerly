@@ -90,6 +90,7 @@ export default function ExpensesPageContent() {
             .from('expenses')
             .select('*', { count: 'exact', head: true })
             .eq('status', 'PAID')
+            .not('category', 'ilike', '%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -107,6 +108,7 @@ export default function ExpensesPageContent() {
             .from('expenses')
             .select('amount')
             .eq('status', 'PAID')
+            .not('category', 'ilike', '%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -125,6 +127,7 @@ export default function ExpensesPageContent() {
             .from('expenses')
             .select('*')
             .eq('status', 'PAID')
+            .not('category', 'ilike', '%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -136,7 +139,7 @@ export default function ExpensesPageContent() {
         const isCurrentMonth = isSameMonth(new Date(), from);
 
         const { data, error } = await dataQuery
-            .order('date', { ascending: !isCurrentMonth })
+            .order('date', { ascending: false })
             .range(offset, limit);
 
         if (data) {
@@ -238,7 +241,7 @@ export default function ExpensesPageContent() {
                                 (filteredExpenses || []).reduce((acc: any, item) => {
                                     const dateObj = new Date(item.date);
                                     if (isNaN(dateObj.getTime())) return acc;
-                                    const monthKey = format(dateObj, "MMMM");
+                                    const monthKey = format(dateObj, "MMMM yyyy");
                                     if (!acc[monthKey]) acc[monthKey] = [];
                                     acc[monthKey].push(item);
                                     return acc;

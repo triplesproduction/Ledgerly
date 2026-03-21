@@ -39,13 +39,13 @@ export function DatePicker({
                 <Button
                     variant={"outline"}
                     className={cn(
-                        "w-full justify-start text-left font-normal bg-zinc-900/50 border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white h-11 px-4 rounded-xl transition-all",
+                        "w-full justify-start text-left font-normal bg-zinc-900/50 border-white/5 text-zinc-400 hover:bg-zinc-800 hover:text-white h-11 px-4 rounded-xl transition-all text-sm",
                         date && "text-white",
                         className
                     )}
                 >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-orange-500" />
-                    {date ? format(date, "MMMM do, yyyy") : <span>Pick a date</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-orange-500 shrink-0" />
+                    <span className="truncate">{date ? format(date, "MMM do, yyyy") : <span>Pick a date</span>}</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="p-0 border-0 bg-transparent shadow-none w-full max-w-[95vw] sm:max-w-fit flex items-center justify-center !z-[200]">

@@ -133,7 +133,8 @@ export default function Dashboard() {
       const { data: expensesData } = await supabase
         .from('expenses')
         .select('amount, date')
-        .eq('status', 'PAID');
+        .eq('status', 'PAID')
+        .not('category', 'ilike', '%transfer%');
 
       // Calculate Yearly Expenses
       const yearlyExpenses = expensesData

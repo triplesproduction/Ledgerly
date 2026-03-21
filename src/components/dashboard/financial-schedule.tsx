@@ -27,6 +27,7 @@ export function FinancialSchedule() {
             .select('*')
             .neq('status', 'PAID')
             .neq('status', 'ARCHIVED')
+            .not('category', 'ilike', '%transfer%')
             .order('date', { ascending: true })
             .limit(50);
 
