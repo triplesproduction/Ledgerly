@@ -78,6 +78,7 @@ export default function OfficeExpensesPageContent() {
     const [repayments, setRepayments] = useState<any[]>([]);
     const [convertingPlan, setConvertingPlan] = useState<any | null>(null);
     const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+    const [transfers, setTransfers] = useState<any[]>([]);
 
     const searchParams = useSearchParams();
 
@@ -111,7 +112,8 @@ export default function OfficeExpensesPageContent() {
 
         // 2. Fetch All Data for Analytics
         const { data: allExpenses } = await supabase.from('expenses').select('amount, expense_type, date, category').ilike('expense_type', 'office_%');
-        const { data: allTransfers } = await supabase.from('fund_transfers').select('amount, from_person, to_person, date');
+        const { data: allTransfers } = await supabase.from('fund_transfers').select('*').order('date', { ascending: false });
+        if (allTransfers) setTransfers(allTransfers);
         const { data: allLoans } = await supabase.from('loans').select('amount_received, date');
         const { data: allLoanRepayments } = await supabase.from('loan_repayments').select('amount_paid, date');
 
@@ -378,6 +380,7 @@ export default function OfficeExpensesPageContent() {
                                 balance={metrics.balanceWithDad} 
                                 totalSent={metrics.totalSentToDad}
                                 totalSpent={metrics.totalSpentByDad}
+                                transfers={transfers}
                                 onSuccess={fetchAllData} 
                             />
                         </div>

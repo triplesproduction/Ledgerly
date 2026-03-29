@@ -107,58 +107,69 @@ export function LoanManagement({ loans, repayments, onSuccess, isAddingLoan, onA
   return (
     <div className="space-y-8">
       <Dialog open={isAddingLoan} onOpenChange={onAddingLoanChange}>
-        <DialogContent className="bg-[#121214] border border-white/10 text-white sm:max-w-[480px]">
+        <DialogContent className="bg-[#09090b] border-white/10 text-white sm:max-w-[480px] p-0 gap-0 outline-none rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)]">
+          <div className="bg-gradient-to-r from-zinc-600/10 to-transparent border-b border-white/5 p-6 py-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-500/10 flex items-center justify-center text-zinc-400 shrink-0 border border-white/10">
+              <Banknote size={24} />
+            </div>
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold">Record Borrowed Funds</DialogTitle>
+              <DialogTitle className="text-xl font-bold tracking-tight text-white">Record Borrowed Funds</DialogTitle>
+              <p className="text-[10px] font-bold text-zinc-500 tracking-[0.05em] uppercase">External Capital Infusion</p>
             </DialogHeader>
-            <form onSubmit={handleAddLoan} className="space-y-5 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="source" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Source (Person / Entity)</Label>
+          </div>
+          <form onSubmit={handleAddLoan} className="p-7 space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="source" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Funding Source</Label>
+              <Input
+                id="source"
+                placeholder="e.g. Personal Fund, HDFC Loan"
+                value={loanForm.source}
+                onChange={(e) => setLoanForm({ ...loanForm, source: e.target.value })}
+                className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-orange-500/30 px-5 text-sm"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2.5">
+                <Label htmlFor="amount" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Principal Amount (₹)</Label>
                 <Input
-                  id="source"
-                  placeholder="e.g. Personal Fund, HDFC Loan"
-                  value={loanForm.source}
-                  onChange={(e) => setLoanForm({ ...loanForm, source: e.target.value })}
-                  className="bg-zinc-900/50 border-white/10 h-11 focus-visible:ring-orange-500/20"
+                  id="amount"
+                  type="number"
+                  placeholder="0.00"
+                  value={loanForm.amount}
+                  onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })}
+                  className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-emerald-500/30 px-5 font-mono"
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Amount Received (₹)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="0.00"
-                    value={loanForm.amount}
-                    onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })}
-                    className="bg-zinc-900/50 border-white/10 h-11 font-mono"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="date" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Date</Label>
-                  <DatePicker
-                    date={loanForm.date}
-                    setDate={(d) => d && setLoanForm({ ...loanForm, date: d })}
-                    className="bg-zinc-900/50 border-white/10 h-11"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Reason or terms..."
-                  value={loanForm.notes}
-                  onChange={(e) => setLoanForm({ ...loanForm, notes: e.target.value })}
-                  className="bg-zinc-900/50 border-white/10 min-h-[100px] focus-visible:ring-orange-500/20"
+              <div className="space-y-2.5">
+                <Label htmlFor="date" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Agreement Date</Label>
+                <DatePicker
+                  date={loanForm.date}
+                  setDate={(d) => d && setLoanForm({ ...loanForm, date: d })}
+                  className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl px-5 hover:bg-white/[0.05]"
                 />
               </div>
-              <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 h-12 font-bold rounded-xl shadow-lg shadow-orange-500/20" disabled={isLoading}>
-                {isLoading ? "Saving..." : "Record Loan"}
+            </div>
+            <div className="space-y-2.5">
+              <Label htmlFor="notes" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Liability Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Terms, interest, or repayment plan..."
+                value={loanForm.notes}
+                onChange={(e) => setLoanForm({ ...loanForm, notes: e.target.value })}
+                className="bg-white/[0.03] border-white/10 min-h-[100px] text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-zinc-500/30 px-5 transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <Button type="button" variant="ghost" onClick={() => onAddingLoanChange?.(false)} className="h-12 px-6 rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold active:scale-95 flex-1">
+                Cancel
               </Button>
-            </form>
+              <Button type="submit" className="h-12 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl font-bold px-10 shadow-xl shadow-orange-500/20 active:scale-[0.97] transition-all flex-[2]" disabled={isLoading}>
+                {isLoading ? "Recording..." : "Record Loan"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -248,44 +259,55 @@ export function LoanManagement({ loans, repayments, onSuccess, isAddingLoan, onA
       </Card>
 
       <Dialog open={isRepayOpen} onOpenChange={setIsRepayOpen}>
-        <DialogContent className="bg-[#121217] border-white/10 text-white">
-          <DialogHeader>
-            <DialogTitle>Record Loan Repayment</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddRepayment} className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="repay_amount" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Repayment Amount (₹)</Label>
+        <DialogContent className="bg-[#09090b] border-white/10 text-white sm:max-w-[480px] p-0 gap-0 outline-none rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)]">
+          <div className="bg-gradient-to-r from-emerald-600/10 to-transparent border-b border-white/5 p-6 py-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0 border border-emerald-500/20">
+              <TrendingUp size={24} />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold tracking-tight text-white">Record Repayment</DialogTitle>
+              <p className="text-[10px] font-bold text-zinc-500 tracking-[0.05em] uppercase">Liability Settlement</p>
+            </DialogHeader>
+          </div>
+          <form onSubmit={handleAddRepayment} className="p-7 space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="repay_amount" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Repayment Amount (₹)</Label>
               <Input
                 id="repay_amount"
                 type="number"
                 placeholder="0.00"
                 value={repayForm.amount}
                 onChange={(e) => setRepayForm({ ...repayForm, amount: e.target.value })}
-                className="bg-white/5 border-white/10 h-11 focus-visible:ring-1 focus-visible:ring-emerald-500/20"
+                className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-emerald-500/30 px-5 font-mono"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="repay_date" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Date</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="repay_date" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Payment Date</Label>
               <DatePicker
                 date={repayForm.date}
                 setDate={(d) => d && setRepayForm({ ...repayForm, date: d })}
-                className="bg-white/5 border-white/10 h-11"
+                className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl px-5 hover:bg-white/[0.05]"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="repay_notes" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notes</Label>
+            <div className="space-y-2.5">
+              <Label htmlFor="repay_notes" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Transaction Notes</Label>
               <Textarea
                 id="repay_notes"
-                placeholder="Repayment details..."
+                placeholder="Payment reference, mode, or notes..."
                 value={repayForm.notes}
                 onChange={(e) => setRepayForm({ ...repayForm, notes: e.target.value })}
-                className="bg-white/5 border-white/10 min-h-[80px]"
+                className="bg-white/[0.03] border-white/10 min-h-[100px] text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-emerald-500/30 px-5 transition-all"
               />
             </div>
-            <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 font-bold rounded-xl" disabled={isLoading}>
-              {isLoading ? "Recording..." : "Confirm Repayment"}
-            </Button>
+            <div className="flex items-center gap-4 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setIsRepayOpen(false)} className="h-12 px-6 rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold active:scale-95 flex-1">
+                Cancel
+              </Button>
+              <Button type="submit" className="h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold px-10 shadow-xl shadow-emerald-500/20 active:scale-[0.97] transition-all flex-[2]" disabled={isLoading}>
+                {isLoading ? "Recording..." : "Confirm Repayment"}
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

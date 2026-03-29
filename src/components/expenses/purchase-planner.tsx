@@ -99,66 +99,77 @@ export function PurchasePlanner({ plans, onSuccess, onConvertToExpense, open, on
   return (
     <div className="space-y-6">
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#121214] border border-white/10 text-white sm:max-w-[480px]">
+        <DialogContent className="bg-[#09090b] border-white/10 text-white sm:max-w-[480px] p-0 gap-0 outline-none rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.9)]">
+          <div className="bg-gradient-to-r from-orange-600/10 to-transparent border-b border-white/5 p-6 py-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0 border border-orange-500/20">
+              <ShoppingBag size={24} />
+            </div>
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold">Add to Purchase Planner</DialogTitle>
+              <DialogTitle className="text-xl font-bold tracking-tight text-white">Add Purchase Plan</DialogTitle>
+              <p className="text-[10px] font-bold text-zinc-500 tracking-[0.05em] uppercase">Inventory & Asset Acquisition</p>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-5 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="item_name" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Item Name</Label>
+          </div>
+          <form onSubmit={handleSubmit} className="p-7 space-y-6">
+            <div className="space-y-2.5">
+              <Label htmlFor="item_name" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Proposed Item Name</Label>
+              <Input
+                id="item_name"
+                placeholder="e.g. Ergonomic Office Chairs"
+                value={formData.item_name}
+                onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-orange-500/30 px-5 text-sm"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2.5">
+                <Label htmlFor="cost" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Estimated Cost (₹)</Label>
                 <Input
-                  id="item_name"
-                  placeholder="e.g. Ergonomic Office Chairs"
-                  value={formData.item_name}
-                  onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
-                  className="bg-zinc-900/50 border-white/10 h-11 focus-visible:ring-orange-500/20"
+                  id="cost"
+                  type="number"
+                  placeholder="0.00"
+                  value={formData.estimated_cost}
+                  onChange={(e) => setFormData({ ...formData, estimated_cost: e.target.value })}
+                  className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-orange-500/30 px-5 font-mono"
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cost" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Estimated Cost (₹)</Label>
-                  <Input
-                    id="cost"
-                    type="number"
-                    placeholder="0.00"
-                    value={formData.estimated_cost}
-                    onChange={(e) => setFormData({ ...formData, estimated_cost: e.target.value })}
-                    className="bg-zinc-900/50 border-white/10 h-11 focus-visible:ring-orange-500/20 font-mono"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="priority" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Priority</Label>
-                  <Select
-                    value={formData.priority}
-                    onValueChange={(v) => setFormData({ ...formData, priority: v })}
-                  >
-                    <SelectTrigger className="bg-zinc-900/50 border-white/10 h-11">
-                      <SelectValue placeholder="Priority" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#16171D] border-white/10 text-white">
-                      <SelectItem value="High">High</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="Low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2.5">
+                <Label htmlFor="priority" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Priority Level</Label>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(v) => setFormData({ ...formData, priority: v })}
+                >
+                  <SelectTrigger className="bg-white/[0.03] border-white/10 h-12 text-white rounded-2xl px-5 hover:bg-white/[0.05]">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#121217] border-white/10 text-white shadow-2xl rounded-2xl">
+                    <SelectItem value="High" className="focus:bg-rose-500/10 focus:text-rose-500">High</SelectItem>
+                    <SelectItem value="Medium" className="focus:bg-orange-500/10 focus:text-orange-500">Medium</SelectItem>
+                    <SelectItem value="Low" className="focus:bg-blue-500/10 focus:text-blue-500">Low</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional details..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="bg-zinc-900/50 border-white/10 min-h-[100px] focus-visible:ring-orange-500/20"
-                />
-              </div>
-              <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 h-12 font-bold shadow-lg shadow-orange-500/20 rounded-xl" disabled={isLoading}>
+            </div>
+            <div className="space-y-2.5">
+              <Label htmlFor="notes" className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 ml-1">Additional Notes</Label>
+              <Textarea
+                id="notes"
+                placeholder="Specifications or reason for purchase..."
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                className="bg-white/[0.03] border-white/10 min-h-[100px] text-white rounded-2xl focus-visible:ring-1 focus-visible:ring-orange-500/30 px-5 transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-4 pt-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange?.(false)} className="h-12 px-6 rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold active:scale-95 flex-1">
+                Cancel
+              </Button>
+              <Button type="submit" className="h-12 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl font-bold px-10 shadow-xl shadow-orange-500/20 active:scale-[0.97] transition-all flex-[2]" disabled={isLoading}>
                 {isLoading ? "Saving..." : "Add to Planner"}
               </Button>
-            </form>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
