@@ -326,41 +326,41 @@ export function AddOfficeExpenseDialog({
           </div>
 
           {/* Footer Actions */}
-          <div className="px-8 py-6 border-t border-white/5 bg-white/[0.01] flex items-center justify-between gap-4 mt-auto">
-            {initialData?.id && !initialData.item_name ? (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={async (e) => {
-                  e.preventDefault();
-                  if (!confirm("Confirm permanent deletion of this record?")) return;
-                  setIsSubmitting(true);
-                  try {
-                    const { error } = await supabase.from("expenses").delete().eq("id", initialData.id);
-                    if (error) throw error;
-                    handleOpenChange(false);
-                    onSuccess();
-                  } catch (err: any) {
-                    alert("Error deleting: " + err.message);
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
-                className="h-12 px-6 rounded-2xl text-rose-500 hover:text-white hover:bg-rose-600 transition-all font-bold gap-2 active:scale-95"
-              >
-                <Trash2 size={16} /> Delete Entry
-              </Button>
-            ) : (
-              <div className="hidden sm:block"></div>
-            )}
+          <div className="px-6 py-5 border-t border-white/5 bg-white/[0.01] flex flex-col sm:flex-row items-center justify-between gap-4 mt-auto">
+            <div className="flex-1 w-full sm:w-auto">
+              {initialData?.id && !initialData.item_name && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    if (!confirm("Confirm permanent deletion of this record?")) return;
+                    setIsSubmitting(true);
+                    try {
+                      const { error } = await supabase.from("expenses").delete().eq("id", initialData.id);
+                      if (error) throw error;
+                      handleOpenChange(false);
+                      onSuccess();
+                    } catch (err: any) {
+                      alert("Error deleting: " + err.message);
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                  className="h-11 w-full sm:w-auto px-5 rounded-xl text-rose-500 hover:text-white hover:bg-rose-500/20 sm:hover:bg-rose-600 transition-all font-bold gap-2 active:scale-95 text-xs"
+                >
+                  <Trash2 size={14} /> Delete Entry
+                </Button>
+              )}
+            </div>
 
-            <div className="flex items-center gap-4 flex-1 sm:flex-initial">
-              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} className="h-12 px-8 rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold active:scale-95">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)} className="h-11 w-full sm:w-auto px-6 rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all font-semibold active:scale-95 text-xs">
                 Cancel
               </Button>
               <Button 
                 type="submit"
-                className="h-12 bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 rounded-2xl font-bold px-10 shadow-xl shadow-orange-500/20 transition-all active:scale-[0.97] tracking-tight"
+                className="h-11 w-full sm:w-auto bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:opacity-90 rounded-xl font-bold px-8 shadow-xl shadow-orange-500/20 transition-all active:scale-[0.97] tracking-tight text-xs"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Saving..." : (initialData?.id && !initialData.item_name ? "Update Expense" : "Save Expense")}
