@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -15,6 +15,9 @@ import type { CampaignExpenseCategory } from "@/types/general";
 interface AddCampaignExpenseDialogProps {
     campaignId: string;
     onSuccess: () => void;
+    initialData?: any;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 const CATEGORIES: { label: string; value: CampaignExpenseCategory }[] = [
@@ -24,8 +27,11 @@ const CATEGORIES: { label: string; value: CampaignExpenseCategory }[] = [
     { label: 'Other Expense', value: 'Other Expense' }
 ];
 
-export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignExpenseDialogProps) {
-    const [open, setOpen] = useState(false);
+export function AddCampaignExpenseDialog({ campaignId, onSuccess, initialData, open: externalOpen, onOpenChange }: AddCampaignExpenseDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+    
+    const open = externalOpen !== undefined ? externalOpen : internalOpen;
+    const setOpen = onOpenChange || setInternalOpen;
 
     // Form state
     const [date, setDate] = useState<Date | undefined>(new Date());
@@ -35,6 +41,22 @@ export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignE
     const [paymentMethod, setPaymentMethod] = useState<"Online" | "Cash">("Online");
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (initialData) {
+            setDate(new Date(initialData.date));
+            setCategory(initialData.category);
+            setDescription(initialData.description);
+            setAmount(initialData.amount?.toString() || "");
+            setPaymentMethod(initialData.payment_method as "Online" | "Cash" || "Online");
+        } else if (open) {
+            setDate(new Date());
+            setCategory("Travel");
+            setDescription("");
+            setAmount("");
+            setPaymentMethod("Online");
+        }
+    }, [initialData, open]);
 
     const handleSave = async () => {
         setIsSubmitting(true);
@@ -69,11 +91,18 @@ export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignE
         };
 
         try {
-            const { error } = await supabase
-                .from('campaign_expenses')
-                .insert([payload]);
-
-            if (error) throw error;
+            if (initialData?.id) {
+                const { error } = await supabase
+                    .from('campaign_expenses')
+                    .update(payload)
+                    .eq('id', initialData.id);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('campaign_expenses')
+                    .insert([payload]);
+                if (error) throw error;
+            }
 
             setOpen(false);
             // Reset form
@@ -93,14 +122,18 @@ export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignE
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button className="rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 px-6 font-semibold">
-                    <Plus size={18} className="mr-2" /> Add Expense
-                </Button>
-            </DialogTrigger>
+            {externalOpen === undefined && (
+                <DialogTrigger asChild>
+                    <Button className="rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 px-6 font-semibold">
+                        <Plus size={18} className="mr-2" /> Add Expense
+                    </Button>
+                </DialogTrigger>
+            )}
             <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-[425px] p-0 gap-0 outline-none w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
-                <DialogHeader className="p-4 pb-2 space-y-1">
-                    <DialogTitle>Add Campaign Expense</DialogTitle>
+                <DialogHeader className="p-4 pb-2 space-y-1 bg-orange-500/5 border-b border-white/5">
+                    <DialogTitle className="text-xl font-bold tracking-tight text-orange-500 px-2 py-1">
+                        {initialData?.id ? "Edit Campaign Expense" : "Add Campaign Expense"}
+                    </DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 sm:gap-7 px-4 sm:px-6 py-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -165,21 +198,47 @@ export function AddCampaignExpenseDialog({ campaignId, onSuccess }: AddCampaignE
                     </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row justify-end items-center px-6 py-5 border-t border-white/5 mt-6 gap-3">
-                    <Button
-                        variant="ghost"
-                        onClick={() => setOpen(false)}
-                        className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors w-full sm:w-auto justify-center"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSave}
-                        disabled={isSubmitting}
-                        className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none w-full sm:w-auto"
-                    >
-                        {isSubmitting ? "Saving..." : "Save Expense"}
-                    </Button>
+                <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-5 border-t border-white/5 mt-6 gap-4 bg-orange-500/5">
+                    {initialData?.id ? (
+                        <Button
+                            variant="ghost"
+                            onClick={async () => {
+                                if (!confirm("Are you sure you want to delete this expense?")) return;
+                                setIsSubmitting(true);
+                                try {
+                                    const { error } = await supabase.from('campaign_expenses').delete().eq('id', initialData.id);
+                                    if (error) throw error;
+                                    setOpen(false);
+                                    onSuccess();
+                                } catch (err: any) {
+                                    alert("Error deleting: " + err.message);
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
+                            }}
+                            className="h-11 text-red-500 hover:text-red-400 hover:bg-red-500/10 px-6 rounded-xl flex items-center gap-2 transition-colors w-full sm:w-auto font-bold"
+                        >
+                            Delete
+                        </Button>
+                    ) : (
+                        <div className="hidden sm:block"></div>
+                    )}
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setOpen(false)}
+                            className="h-11 text-zinc-400 hover:text-white hover:bg-white/5 px-6 rounded-xl font-medium transition-colors w-full sm:w-auto justify-center"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSave}
+                            disabled={isSubmitting}
+                            className="h-11 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20 px-8 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none w-full sm:w-auto"
+                        >
+                            {isSubmitting ? "Saving..." : (initialData?.id ? "Update Expense" : "Save Expense")}
+                        </Button>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>

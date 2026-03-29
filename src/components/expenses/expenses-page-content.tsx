@@ -89,14 +89,14 @@ export default function ExpensesPageContent() {
         let countQuery = supabase
             .from('expenses')
             .select('*', { count: 'exact', head: true })
-            .eq('status', 'PAID')
-            .not('category', 'ilike', '%transfer%')
+            .neq('status', 'ARCHIVED')
+            .or('category.is.null,category.not.ilike.%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
 
         if (searchTerm.trim()) {
             const searchPattern = `%${searchTerm.trim()}%`;
-            countQuery = countQuery.or(`vendor.ilike.${searchPattern},category.ilike.${searchPattern}`);
+            countQuery = countQuery.or(`vendor.ilike.${searchPattern},description.ilike.${searchPattern},category.ilike.${searchPattern}`);
         }
 
         const { count } = await countQuery;
@@ -107,14 +107,14 @@ export default function ExpensesPageContent() {
         let totalQuery = supabase
             .from('expenses')
             .select('amount')
-            .eq('status', 'PAID')
-            .not('category', 'ilike', '%transfer%')
+            .neq('status', 'ARCHIVED')
+            .or('category.is.null,category.not.ilike.%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
 
         if (searchTerm.trim()) {
             const searchPattern = `%${searchTerm.trim()}%`;
-            totalQuery = totalQuery.or(`vendor.ilike.${searchPattern},category.ilike.${searchPattern}`);
+            totalQuery = totalQuery.or(`vendor.ilike.${searchPattern},description.ilike.${searchPattern},category.ilike.${searchPattern}`);
         }
 
         const { data: totalData } = await totalQuery;
@@ -126,27 +126,28 @@ export default function ExpensesPageContent() {
         let dataQuery = supabase
             .from('expenses')
             .select('*')
-            .eq('status', 'PAID')
-            .not('category', 'ilike', '%transfer%')
+            .neq('status', 'ARCHIVED')
+            .or('category.is.null,category.not.ilike.%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
 
         if (searchTerm.trim()) {
             const searchPattern = `%${searchTerm.trim()}%`;
-            dataQuery = dataQuery.or(`vendor.ilike.${searchPattern},category.ilike.${searchPattern}`);
+            dataQuery = dataQuery.or(`vendor.ilike.${searchPattern},description.ilike.${searchPattern},category.ilike.${searchPattern}`);
         }
 
         const isCurrentMonth = isSameMonth(new Date(), from);
 
         const { data, error } = await dataQuery
             .order('date', { ascending: false })
+            .order('created_at', { ascending: false })
             .range(offset, limit);
 
         if (data) {
             const formatted = data.map((item: any) => ({
                 id: item.id,
                 date: item.date,
-                description: item.description,
+                description: item.description || "",
                 category: item.category || "General",
                 amount: Number(item.amount),
                 payment_method: item.payment_method,
@@ -174,10 +175,11 @@ export default function ExpensesPageContent() {
     }, [page, searchTerm, searchParams]);
 
 
-    // Filter
+    // Client-side Filter (Sync with DB search logic)
     const filteredExpenses = (expensesData || []).filter((item) =>
         (item.vendor || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.category || "").toLowerCase().includes(searchTerm.toLowerCase())
+        (item.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.description || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (

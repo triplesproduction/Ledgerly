@@ -5,7 +5,7 @@ import { ArrowUpRight, ArrowDownLeft, CheckCircle2, Circle } from "lucide-react"
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
-import { format, addMonths } from "date-fns";
+import { format, addMonths, addDays, startOfMonth } from "date-fns";
 
 export function FinancialSchedule() {
     const [activeTab, setActiveTab] = useState<"receivables" | "payables">("receivables");
@@ -19,46 +19,63 @@ export function FinancialSchedule() {
     const fetchData = async () => {
         setIsLoading(true);
 
-        const today = format(new Date(), 'yyyy-MM-dd');
+        const todayObj = new Date();
+        const thirtyDaysFromNow = format(addDays(todayObj, 30), 'yyyy-MM-dd');
+        const startOfLastMonth = format(startOfMonth(addMonths(todayObj, -1)), 'yyyy-MM-dd');
 
-        // Fetch Payables: ONLY Unpaid/Scheduled Expenses
+        // 1. Fetch Expenses (Payables)
         const { data: expenses } = await supabase
             .from('expenses')
             .select('*')
             .neq('status', 'PAID')
             .neq('status', 'ARCHIVED')
-            .not('category', 'ilike', '%transfer%')
+            .not('category', 'ilike', '%transfer%') 
+            .gte('date', startOfLastMonth)
+            .lte('date', thirtyDaysFromNow)
             .order('date', { ascending: true })
-            .limit(50);
+            .limit(100);
 
-        // Fetch Receivables: ONLY Pending/Expected Income
+        if (expenses) {
+            const processedExpenses = expenses.map(item => ({
+                id: item.id,
+                vendor: item.vendor || item.description || "Unknown Vendor",
+                service: item.service || item.category,
+                amount: Number(item.amount),
+                due: format(new Date(item.date), "MMM dd"),
+                paid_at: item.paid_date ? format(new Date(item.paid_date), "MMM dd") : null,
+                date: item.date,
+                status: item.status || "SCHEDULED",
+                type: 'payable',
+                is_recurring: !!item.recurring_rule_id
+            }));
+
+            // ⚡ SMART SORTING: Recurring First, then Date ASC
+            processedExpenses.sort((a, b) => {
+                if (a.is_recurring && !b.is_recurring) return -1;
+                if (!a.is_recurring && b.is_recurring) return 1;
+                return a.date.localeCompare(b.date);
+            });
+
+            setPayables(processedExpenses);
+        }
+
+        // 2. Fetch Receivables: Focus on recent and upcoming data
         const { data: income } = await supabase
             .from('income')
             .select('*, clients(name)')
             .neq('status', 'RECEIVED')
             .neq('status', 'ARCHIVED')
+            .gte('date', startOfLastMonth) // DONT show items older than last month
+            .lte('date', thirtyDaysFromNow)
             .order('date', { ascending: true })
-            .limit(50);
-
-        if (expenses) {
-            setPayables(expenses.map(item => ({
-                id: item.id,
-                vendor: item.vendor || item.description || "Unknown Vendor",
-                service: item.service || item.category,
-                amount: Number(item.amount),
-                due: format(new Date(item.date), "MMM dd"), // Original due date
-                paid_at: item.paid_date ? format(new Date(item.paid_date), "MMM dd") : null,
-                date: item.date, // Store for sorting/comparison
-                status: item.status || "SCHEDULED",
-                type: 'payable'
-            })));
-        }
+            .limit(100);
 
         if (income) {
-            setReceivables(income.map(item => {
+            const todayStr = format(todayObj, 'yyyy-MM-dd');
+            
+            const processedIncome = income.map(item => {
                 // @ts-ignore
                 const joinedClientName = item.clients?.name;
-
                 let clientName = joinedClientName || "Unknown";
                 let desc = item.description || "";
 
@@ -71,8 +88,8 @@ export function FinancialSchedule() {
 
                 return {
                     id: item.id,
-                    client: clientName || "Client",
-                    project: desc || "Project",
+                    client: clientName,
+                    project: desc,
                     amount: Number(item.amount),
                     due: item.expected_date ? format(new Date(item.expected_date), "MMM dd") : format(new Date(item.date), "MMM dd"),
                     paid_at: item.status === 'RECEIVED' ? format(new Date(item.date), "MMM dd") : null,
@@ -80,7 +97,24 @@ export function FinancialSchedule() {
                     status: item.status || "EXPECTED",
                     type: 'receivable'
                 };
-            }));
+            });
+
+            // ⚡ SMART SORTING: Upcoming/Current First, Overdue last
+            processedIncome.sort((a, b) => {
+                const aIsFuture = a.date >= todayStr;
+                const bIsFuture = b.date >= todayStr;
+
+                if (aIsFuture && !bIsFuture) return -1;
+                if (!aIsFuture && bIsFuture) return 1;
+                
+                // If both are future, sort ASC (Soonest first)
+                if (aIsFuture && bIsFuture) return a.date.localeCompare(b.date);
+                
+                // If both are overdue, sort DESC (Recent overdue first)
+                return b.date.localeCompare(a.date);
+            });
+
+            setReceivables(processedIncome);
         }
 
         setIsLoading(false);
@@ -100,7 +134,7 @@ export function FinancialSchedule() {
 
     const handleCheck = async (item: any) => {
         if (item.type === 'receivable') {
-            if (!confirm("Mark as Received? This creates a new income entry.")) return;
+            if (!confirm("Mark as Received?")) return;
 
             const { data: original, error: fetchError } = await supabase
                 .from('income')
@@ -114,20 +148,41 @@ export function FinancialSchedule() {
             }
 
             if (original.retainer_instance_id) {
+                // UPDATE the existing record to RECEIVED
                 const { error: updateError } = await supabase
                     .from('income')
-                    .update({ status: 'RECEIVED', date: format(new Date(), 'yyyy-MM-dd') })
+                    .update({
+                        status: 'RECEIVED',
+                        date: format(new Date(), 'yyyy-MM-dd')
+                    })
                     .eq('id', item.id);
 
                 if (updateError) {
                     console.error("Error updating retainer item:", updateError);
                     alert("Failed to update status.");
                 } else {
+                    // SEAMLESS SYNC: Update the outer monthly_instance status 
+                    const { data: siblingMs } = await supabase.from('income').select('status, date').eq('retainer_instance_id', original.retainer_instance_id);
+
+                    if (siblingMs && siblingMs.length > 0) {
+                        const allPaid = siblingMs.every(m => m.status === 'RECEIVED');
+                        const partialPaid = siblingMs.some(m => m.status === 'RECEIVED');
+                        const isFutureMonth = siblingMs.some(m => {
+                            const d = new Date(m.date);
+                            const now = new Date();
+                            return d > now && d.getMonth() !== now.getMonth();
+                        });
+
+                        const overallStatus = allPaid ? 'paid' : (partialPaid ? 'partial' : (isFutureMonth ? 'scheduled' : 'generated'));
+                        await supabase.from('monthly_instances').update({ status: overallStatus }).eq('id', original.retainer_instance_id);
+                    }
+                    
                     fetchData();
                 }
                 return;
             }
 
+            // Normal Income (Non-Retainer)
             const { error: insertError } = await supabase.from('income').insert({
                 amount: original.amount,
                 description: original.description,
@@ -142,30 +197,26 @@ export function FinancialSchedule() {
             });
 
             if (insertError) {
-                console.error("Error creating new entry:", insertError);
+                alert("Error recording payment: " + insertError.message);
                 return;
             }
 
-            const { error: archiveError } = await supabase
-                .from('income')
-                .update({
-                    status: 'ARCHIVED',
-                    description: original.description ? `${original.description} (Converted)` : '(Converted)'
-                })
-                .eq('id', item.id);
+            // Archive the expected entry
+            await supabase.from('income').update({
+                status: 'ARCHIVED',
+                description: original.description ? `${original.description} (Converted)` : '(Converted)'
+            }).eq('id', item.id);
 
-            if (archiveError) console.error("Error archiving:", archiveError);
             fetchData();
 
         } else {
-            // Expenses Logic: Update to PAID, set paid_date, PRESERVE original date
+            // Expenses Logic
             const { error } = await supabase.from('expenses').update({
                 status: 'PAID',
                 paid_date: format(new Date(), 'yyyy-MM-dd')
             }).eq('id', item.id);
 
             if (error) {
-                console.error("Error updating expense:", error);
                 alert("Failed to update expense status.");
             } else fetchData();
         }

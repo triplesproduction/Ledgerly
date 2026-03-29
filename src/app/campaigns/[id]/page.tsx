@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
-import { IndianRupee, ArrowLeft, Plane, Home, Coffee, Package } from "lucide-react";
+import { IndianRupee, ArrowLeft, Plane, Home, Coffee, Package, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddCampaignExpenseDialog } from "@/components/campaigns/add-campaign-expense-dialog";
@@ -24,6 +24,7 @@ export default function CampaignDetailsPage() {
     const [expenses, setExpenses] = useState<CampaignExpense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [editingExpense, setEditingExpense] = useState<CampaignExpense | null>(null);
 
     const fetchCampaignData = async () => {
         setIsLoading(true);
@@ -243,6 +244,20 @@ export default function CampaignDetailsPage() {
                     expenses={expenses.filter(e => e.category === selectedCategory)}
                     allocated={getAllocatedForCategory(selectedCategory)}
                     icon={getIconForCategory(selectedCategory)}
+                    onSuccess={fetchCampaignData}
+                />
+            )}
+
+            {editingExpense && (
+                <AddCampaignExpenseDialog 
+                    campaignId={id}
+                    initialData={editingExpense}
+                    open={!!editingExpense}
+                    onOpenChange={(open) => !open && setEditingExpense(null)}
+                    onSuccess={() => {
+                        setEditingExpense(null);
+                        fetchCampaignData();
+                    }}
                 />
             )}
 
@@ -257,6 +272,7 @@ export default function CampaignDetailsPage() {
                             <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</TableHead>
                             <TableHead className="w-[120px] text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment</TableHead>
                             <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</TableHead>
+                            <TableHead className="w-[80px] text-right text-xs font-bold uppercase tracking-wider text-muted-foreground pr-6">Action</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -287,6 +303,14 @@ export default function CampaignDetailsPage() {
                                             <IndianRupee size={12} className="text-zinc-500" />
                                             {Number(expense.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                                         </span>
+                                    </TableCell>
+                                    <TableCell className="text-right pr-6">
+                                        <button 
+                                            onClick={() => setEditingExpense(expense)}
+                                            className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-orange-500 transition-colors"
+                                        >
+                                            <Edit2 size={14} />
+                                        </button>
                                     </TableCell>
                                 </TableRow>
                             ))

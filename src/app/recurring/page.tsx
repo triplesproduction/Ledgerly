@@ -133,24 +133,13 @@ export default function RetainersPage() {
 
             // 2. Handle Income Entries
             if (instanceIds.length > 0) {
-                if (keepEntries) {
-                    // Unlink Income (Set retainer_instance_id = NULL)
-                    // They become standalone entries
-                    const { error: incomeError } = await supabase
-                        .from('income')
-                        .update({ retainer_instance_id: null })
-                        .in('retainer_instance_id', instanceIds);
+                // Unconditionally delete ALL related income entries
+                const { error: incomeError } = await supabase
+                    .from('income')
+                    .delete()
+                    .in('retainer_instance_id', instanceIds);
 
-                    if (incomeError) throw incomeError;
-                } else {
-                    // Delete Income
-                    const { error: incomeError } = await supabase
-                        .from('income')
-                        .delete()
-                        .in('retainer_instance_id', instanceIds);
-
-                    if (incomeError) throw incomeError;
-                }
+                if (incomeError) throw incomeError;
             }
 
             // 3. Delete Contract (Cascade should handle versions/instances, but we'll manually cleanup to be safe/explicit or if cascade isn't set)
@@ -342,49 +331,35 @@ export default function RetainersPage() {
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <DialogContent className="bg-[#16171D] border-white/10 text-foreground sm:max-w-md w-[95vw] max-h-[90vh] overflow-y-auto custom-scrollbar">
+                <DialogContent className="bg-card border-white/10 text-foreground sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-white">Delete Contract</DialogTitle>
+                        <DialogTitle className="text-xl">Delete Recurring Income</DialogTitle>
                     </DialogHeader>
-                    <div className="py-4 text-zinc-400 text-sm space-y-4">
-                        <p>
-                            You are about to delete <span className="text-white font-medium">{contracts.find(c => c.id === deleteId)?.name}</span>.
-                        </p>
-                        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-                            <h4 className="text-orange-400 font-medium mb-1 flex items-center gap-2">
-                                <AlertTriangle size={16} /> Data Handling
+                    <div className="py-4 space-y-4">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400">
+                            <h4 className="font-semibold flex items-center gap-2 mb-2">
+                                <AlertTriangle size={16} /> Warning: Destructive Action
                             </h4>
-                            <p className="text-xs text-orange-200/70">
-                                This contract has generated income entries. How would you like to handle them?
+                            <p className="text-xs text-red-200/70">
+                                This will permanently delete this contract AND all associated income entries, including past history.
                             </p>
                         </div>
                     </div>
                     <DialogFooter className="flex-col sm:justify-start gap-2">
-                        <div className="flex flex-col w-full gap-3">
-                            <Button
-                                variant="destructive"
-                                onClick={() => confirmDelete(false)}
-                                className="w-full justify-between"
-                            >
-                                <span>Delete Everything</span>
-                                <span className="text-xs opacity-70 font-normal">Contract + Entries</span>
-                            </Button>
-
-                            <Button
-                                variant="secondary"
-                                onClick={() => confirmDelete(true)}
-                                className="w-full justify-between bg-white/5 hover:bg-white/10 text-white"
-                            >
-                                <span>Delete Contract Only</span>
-                                <span className="text-xs opacity-70 font-normal">Keep Entries</span>
-                            </Button>
-
+                        <div className="flex w-full gap-3 justify-end">
                             <Button
                                 variant="ghost"
                                 onClick={() => setDeleteId(null)}
-                                className="w-full mt-2"
+                                className="text-zinc-400 hover:text-white"
                             >
                                 Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => confirmDelete(false)}
+                                className="bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20"
+                            >
+                                <span>Delete Entirely</span>
                             </Button>
                         </div>
                     </DialogFooter>

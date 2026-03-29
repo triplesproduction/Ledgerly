@@ -22,7 +22,19 @@ export default function ClientDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (id) fetchData();
+        if (id) {
+            fetchData();
+            
+            // Listen for changes in the income table to keep the ledger synced
+            const channel = supabase
+                .channel(`client-${id}-ledger`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'income', filter: `client_id=eq.${id}` }, fetchData)
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        }
     }, [id]);
 
     const fetchData = async () => {
@@ -84,7 +96,7 @@ export default function ClientDetailPage() {
         .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return (
-        <div className="min-h-screen bg-transparent p-8 font-sans text-foreground">
+        <div className="min-h-screen bg-transparent p-4 md:p-0 font-sans text-foreground">
             {/* Header */}
             <div className="flex items-center gap-4 mb-10">
                 <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white">
@@ -106,9 +118,9 @@ export default function ClientDetailPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Left: Client Info */}
-                <div className="space-y-6">
+                <div className="space-y-6 lg:col-span-1">
                     <Card className="bg-card border-white/5">
                         <CardHeader className="p-4 pb-0">
                             <CardTitle className="text-lg flex items-center gap-2">
@@ -154,7 +166,7 @@ export default function ClientDetailPage() {
                 </div>
 
                 {/* Right: Payment History */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-3 space-y-6">
                     <div className="flex items-center justify-between">
                         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                             <Wallet size={16} className="text-blue-500" /> Payment History

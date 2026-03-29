@@ -112,20 +112,34 @@ export default function RecurringCostsPage() {
 
                 if (error) throw error;
 
-                // SYNC: Update all FUTURE/SCHEDULED expenses to match the new details
-                // This ensures the dashboard forecast immediately reflects the new amount/name
-                const { error: syncError } = await supabase
+                // SYNC: Update all FUTURE/SCHEDULED expenses to match the new details (including Date)
+                const { data: scheduledItems } = await supabase
                     .from('expenses')
-                    .update({
-                        amount: parseFloat(formData.amount),
-                        vendor: formData.vendor || formData.name,
-                        category: formData.category,
-                        description: `${formData.name} (Recurring)`
-                    })
+                    .select('id, date')
                     .eq('recurring_rule_id', editingId)
                     .eq('status', 'SCHEDULED');
 
-                if (syncError) console.error("Failed to sync scheduled expenses:", syncError);
+                if (scheduledItems && scheduledItems.length > 0) {
+                    const dueDay = parseInt(formData.due_day);
+                    
+                    for (const item of scheduledItems) {
+                        const itemDate = parseISO(item.date);
+                        const daysInMonth = endOfMonth(itemDate).getDate();
+                        const clampedDay = Math.min(dueDay, daysInMonth);
+                        const newDueDate = format(setDayOfMonth(itemDate, clampedDay), 'yyyy-MM-dd');
+
+                        await supabase
+                            .from('expenses')
+                            .update({
+                                date: newDueDate,
+                                amount: parseFloat(formData.amount),
+                                vendor: formData.vendor || formData.name,
+                                category: formData.category,
+                                description: `${formData.name} (Recurring)`
+                            })
+                            .eq('id', item.id);
+                    }
+                }
 
             } else {
                 // Create Rule
@@ -255,17 +269,16 @@ export default function RecurringCostsPage() {
     };
 
     const handleDeleteRule = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this recurring rule? This will remove future SCHEDULED expenses, but keep history.")) return;
+        if (!confirm("Are you sure you want to delete this recurring rule? This will delete ALL associated expenses, including past history.")) return;
 
-        // 1. Delete associated FUTURE expenses only (Preserve History)
+        // 1. Delete ALL associated expenses (History + Scheduled)
         const { error: expError } = await supabase
             .from('expenses')
             .delete()
-            .eq('recurring_rule_id', id)
-            .eq('status', 'SCHEDULED');
+            .eq('recurring_rule_id', id);
 
         if (expError) {
-            console.error("Error cleaning up scheduled expenses:", expError);
+            console.error("Error cleaning up expenses:", expError);
         }
 
         // 2. Delete the rule

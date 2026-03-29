@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment as Blank, Suspense, useMemo } from "react";
+import { useState, useEffect, Fragment as Blank, Suspense, useMemo, useRef } from "react";
 import { useSearchParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -121,6 +121,17 @@ export default function IncomePageContent() {
         fetchPaymentMethods();
     }, []);
 
+    // Sync local page state with URL search params
+    useEffect(() => {
+        const urlPage = searchParams?.get("page");
+        if (urlPage) {
+            const p = parseInt(urlPage);
+            if (!isNaN(p)) setPage(p);
+        } else {
+            setPage(1);
+        }
+    }, [searchParams]);
+
     const fetchIncome = async () => {
         setIsLoading(true);
         const { from, to: toDate } = dateRange;
@@ -139,7 +150,7 @@ export default function IncomePageContent() {
         let countQuery = supabase
             .from('income')
             .select('*', { count: 'exact', head: true })
-            .eq('status', 'RECEIVED')
+            .neq('status', 'ARCHIVED')
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -154,7 +165,7 @@ export default function IncomePageContent() {
         let totalQuery = supabase
             .from('income')
             .select('amount')
-            .eq('status', 'RECEIVED')
+            .neq('status', 'ARCHIVED')
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -170,7 +181,7 @@ export default function IncomePageContent() {
         let dataQuery = supabase
             .from('income')
             .select('*, services(name), clients(name)')
-            .eq('status', 'RECEIVED')
+            .neq('status', 'ARCHIVED')
             .gte('date', fromStr)
             .lte('date', toStr);
 
@@ -182,7 +193,8 @@ export default function IncomePageContent() {
         const isCurrentMonth = isSameMonth(new Date(), from);
 
         const { data } = await dataQuery
-            .order('date', { ascending: !isCurrentMonth })
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false })
             .range(offset, limit);
 
         if (data) {
@@ -215,7 +227,22 @@ export default function IncomePageContent() {
         setIsLoading(false);
     };
 
+    const prevFiltersRef = useRef({ searchTerm, from: dateRange.from.getTime(), to: dateRange.to.getTime() });
+
     useEffect(() => {
+        const filtersChanged =
+            prevFiltersRef.current.searchTerm !== searchTerm ||
+            prevFiltersRef.current.from !== dateRange.from.getTime() ||
+            prevFiltersRef.current.to !== dateRange.to.getTime();
+
+        // Update ref immediately for the current values
+        prevFiltersRef.current = { searchTerm, from: dateRange.from.getTime(), to: dateRange.to.getTime() };
+
+        if (filtersChanged && page !== 1) {
+            setPage(1);
+            return;
+        }
+
         fetchIncome();
         const subscription = supabase
             .channel('public:income')

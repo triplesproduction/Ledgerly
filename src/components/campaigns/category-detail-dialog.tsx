@@ -2,10 +2,11 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { IndianRupee, Clock, Wallet, Info } from "lucide-react";
+import { IndianRupee, Clock, Wallet, Info, Edit2 } from "lucide-react";
 import { format } from "date-fns";
 import type { CampaignExpense } from "@/types/general";
-import React from "react";
+import React, { useState } from "react";
+import { AddCampaignExpenseDialog } from "./add-campaign-expense-dialog";
 
 interface CategoryDetailDialogProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ interface CategoryDetailDialogProps {
     expenses: CampaignExpense[];
     allocated: number;
     icon: React.ReactNode;
+    onSuccess: () => void;
 }
 
 export function CategoryDetailDialog({ 
@@ -22,8 +24,10 @@ export function CategoryDetailDialog({
     category, 
     expenses, 
     allocated,
-    icon 
+    icon,
+    onSuccess
 }: CategoryDetailDialogProps) {
+    const [editingExpense, setEditingExpense] = useState<CampaignExpense | null>(null);
     const totalSpent = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
     const remaining = allocated - totalSpent;
     const progress = allocated > 0 ? (totalSpent / allocated) * 100 : 0;
@@ -108,7 +112,8 @@ export function CategoryDetailDialog({
                                     <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3">Date</TableHead>
                                     <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3">Description</TableHead>
                                     <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3">Method</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 text-right pr-6">Amount</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 text-right">Amount</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 text-right pr-6">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -136,11 +141,19 @@ export function CategoryDetailDialog({
                                                     {expense.payment_method === 'Cash' ? '💵' : '💳'} {expense.payment_method || 'Online'}
                                                 </span>
                                             </TableCell>
-                                            <TableCell className="py-4 text-right pr-6">
+                                            <TableCell className="py-4 text-right">
                                                 <div className="flex items-center justify-end gap-1 font-bold text-white">
                                                     <IndianRupee size={12} className="text-zinc-600" />
                                                     {Number(expense.amount).toLocaleString("en-IN")}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell className="py-4 text-right pr-6">
+                                                <button 
+                                                    onClick={() => setEditingExpense(expense)}
+                                                    className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-orange-500 transition-colors"
+                                                >
+                                                    <Edit2 size={14} />
+                                                </button>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -150,6 +163,19 @@ export function CategoryDetailDialog({
                     </div>
                 </div>
             </DialogContent>
+
+            {editingExpense && (
+                <AddCampaignExpenseDialog 
+                    campaignId={editingExpense.campaign_id}
+                    initialData={editingExpense}
+                    open={!!editingExpense}
+                    onOpenChange={(open) => !open && setEditingExpense(null)}
+                    onSuccess={() => {
+                        setEditingExpense(null);
+                        onSuccess();
+                    }}
+                />
+            )}
         </Dialog>
     );
 }

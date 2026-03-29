@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, History, Plus, Pencil, Trash, Play, PauseCircle } from "lucide-react";
+import { ArrowLeft, Clock, History, Plus, Pencil, Trash, Play, PauseCircle, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { EditMilestoneModal } from "@/components/retainer/edit-milestone-modal";
+import { BuyPackageDialog } from "@/components/retainer/buy-package-dialog";
 
 export default function RetainerDetailPage() {
     const params = useParams();
@@ -35,9 +36,34 @@ export default function RetainerDetailPage() {
     const [paymentStructureType, setPaymentStructureType] = useState("100");
     const [balanceOffset, setBalanceOffset] = useState("15");
 
+    // Package State
+    const [isPackageOpen, setIsPackageOpen] = useState(false);
+
     useEffect(() => {
-        if (id) fetchData();
-    }, [id]);
+        if (id) {
+            fetchData();
+
+            // Setup Realtime subscriptions to keep the dashboard in perfect sync
+            const channel = supabase
+                .channel(`retainer-${id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'retainer_contracts', filter: `id=eq.${id}` }, fetchData)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'contract_versions', filter: `contract_id=eq.${id}` }, fetchData)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'income', filter: `client_id=eq.${contract?.client_id}` }, fetchData)
+                .subscribe();
+
+            // We also need another channel for instances since they use version IDs
+            // Simplified: Just use a less restrictive wildcard for now given the scope
+            const instanceChannel = supabase
+                .channel(`retainer-instances-${id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'monthly_instances' }, fetchData)
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+                supabase.removeChannel(instanceChannel);
+            };
+        }
+    }, [id, contract?.client_id]);
 
     const fetchData = async () => {
         setIsLoading(true);
@@ -64,7 +90,8 @@ export default function RetainerDetailPage() {
                 .from("monthly_instances")
                 .select("*")
                 .in("contract_version_id", vIds)
-                .order("month_date", { ascending: false });
+                .order("month_date", { ascending: false })
+                .order("created_at", { ascending: false });
             if (i) setInstances(i as unknown as MonthlyInstance[]);
         }
 
@@ -245,7 +272,7 @@ export default function RetainerDetailPage() {
                                             date: m.date,
                                             description: `${contract?.name} - ${m.name}`,
                                             category: 'Retainer',
-                                            status: 'EXPECTED',
+                                            status: 'PENDING',
                                             milestone_label: m.name
                                         }));
 
@@ -281,18 +308,53 @@ export default function RetainerDetailPage() {
     const [editMilestone, setEditMilestone] = useState<any | null>(null);
 
     const handleViewInstance = async (inst: MonthlyInstance) => {
+        if (selectedInstance?.id === inst.id) {
+            setSelectedInstance(null);
+            setSelectedInstanceMilestones([]);
+            return;
+        }
+
+        // Fetch data FIRST before opening the UI!
+        const { data } = await supabase.from('income').select('*').eq('retainer_instance_id', inst.id).order('date', { ascending: true });
+        
+        // If an instance is part of a bulk package, it won't have individual income rows to avoid ledger duplication.
+        // We inject a virtual visual object to clearly indicate it's covered.
+        if ((!data || data.length === 0) && inst.status === 'paid') {
+            setSelectedInstanceMilestones([{
+                id: 'virtual-package',
+                milestone_label: 'Covered by Bulk Package',
+                status: 'RECEIVED',
+                date: inst.month_date,
+                amount: inst.total_due,
+                is_virtual: true
+            }]);
+        } else {
+            setSelectedInstanceMilestones(data || []);
+        }
+
+        // Batch the update: Tell React to expand the UI ONLY after the milestones array is loaded.
         setSelectedInstance(inst);
-        const { data } = await supabase.from('income').select('*').eq('retainer_instance_id', inst.id);
-        if (data) setSelectedInstanceMilestones(data);
     };
 
     const handleMarkMilestonePaid = async (ms: any) => {
-        const newStatus = ms.status === 'RECEIVED' ? 'EXPECTED' : 'RECEIVED';
+        const newStatus = ms.status === 'RECEIVED' ? 'PENDING' : 'RECEIVED';
         const { error } = await supabase.from('income').update({ status: newStatus }).eq('id', ms.id);
 
         if (error) {
             alert("Error updating status: " + error.message);
         } else {
+            // Also sync outer instance pill seamlessly
+            const { data: siblingMs } = await supabase.from('income').select('status').eq('retainer_instance_id', ms.retainer_instance_id);
+            if (siblingMs && siblingMs.length > 0) {
+                 const allPaid = siblingMs.every(m => m.status === 'RECEIVED');
+                 const partialPaid = siblingMs.some(m => m.status === 'RECEIVED');
+                 
+                 const isFutureMonth = new Date(ms.date) > new Date() && new Date(ms.date).getMonth() !== new Date().getMonth();
+                 
+                 const overallStatus = allPaid ? 'paid' : (partialPaid ? 'partial' : (isFutureMonth ? 'scheduled' : 'generated'));
+                 await supabase.from('monthly_instances').update({ status: overallStatus }).eq('id', ms.retainer_instance_id);
+            }
+
             if (selectedInstance) handleViewInstance(selectedInstance);
             fetchData();
         }
@@ -374,6 +436,16 @@ export default function RetainerDetailPage() {
             if (error) {
                 alert("Error pausing: " + error.message);
             } else {
+                // Delete all projected entries (scheduled/generated) to clean up upcoming records
+                const versionIds = versions.map(v => v.id);
+                if (versionIds.length > 0) {
+                    await supabase
+                        .from('monthly_instances')
+                        .delete()
+                        .in('contract_version_id', versionIds)
+                        .in('status', ['scheduled', 'generated']);
+                }
+
                 setContract({ ...contract, status: 'paused' });
                 fetchData();
             }
@@ -505,23 +577,33 @@ export default function RetainerDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left: Versions History */}
                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
                         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                            <Clock size={16} className="text-orange-500" /> Version History
+                            <Clock size={16} className="text-orange-500 shrink-0" /> Version History
                         </h2>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/10"
-                            onClick={() => {
-                                setEditingVersion(null);
-                                setNewPrice("");
-                                setEffectiveDate("");
-                                setIsNewVerOpen(true);
-                            }}
-                        >
-                            <Plus size={14} className="mr-1" /> New Price
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-orange-500 hover:text-orange-400 hover:bg-orange-500/10 shrink-0"
+                                onClick={() => {
+                                    setEditingVersion(null);
+                                    setNewPrice("");
+                                    setEffectiveDate("");
+                                    setIsNewVerOpen(true);
+                                }}
+                            >
+                                <Plus size={14} className="mr-1" /> New Price
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="bg-emerald-500/10 text-emerald-500 hover:text-white hover:bg-emerald-500/20 border border-emerald-500/10 shrink-0"
+                                onClick={() => setIsPackageOpen(true)}
+                            >
+                                <Package size={14} className="mr-1" /> Pay Package
+                            </Button>
+                        </div>
                     </div>
 
                     <div className="space-y-4">
@@ -546,6 +628,12 @@ export default function RetainerDetailPage() {
                                     </div>
                                     <div className="text-xs text-zinc-500">
                                         Effective from <span className="text-zinc-300">{format(new Date(ver.effective_start_date), "MMM d, yyyy")}</span>
+                                        {ver.effective_end_date && (
+                                            <>
+                                                <br />
+                                                Expires <span className="text-zinc-300">{format(new Date(ver.effective_end_date), "MMM d, yyyy")}</span>
+                                            </>
+                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -579,9 +667,21 @@ export default function RetainerDetailPage() {
                                     </div>
                                     <div className="text-right shrink-0">
                                         <div className="font-mono text-white text-sm sm:text-base">₹{inst.total_due.toLocaleString()}</div>
-                                        <Badge variant="secondary" className="text-[10px] h-5 bg-zinc-800 text-zinc-400">
-                                            {inst.status}
+                                        <Badge variant="outline" className={cn(
+                                            "text-[10px] h-5 capitalize shrink-0",
+                                            (inst.status === 'generated' && new Date(inst.month_date) > new Date() && new Date(inst.month_date).getMonth() !== new Date().getMonth() ? 'scheduled' : inst.status) === 'paid' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
+                                            (inst.status === 'generated' && new Date(inst.month_date) > new Date() && new Date(inst.month_date).getMonth() !== new Date().getMonth() ? 'scheduled' : inst.status) === 'partial' ? "bg-amber-500/10 border-amber-500/20 text-amber-500" :
+                                            (inst.status === 'generated' && new Date(inst.month_date) > new Date() && new Date(inst.month_date).getMonth() !== new Date().getMonth() ? 'scheduled' : inst.status) === 'scheduled' ? "bg-blue-500/10 border-blue-500/20 text-blue-400" :
+                                            inst.status === 'skipped' ? "bg-zinc-800 border-zinc-700 text-zinc-500" :
+                                            "bg-zinc-800 border-zinc-700 text-zinc-400"
+                                        )}>
+                                            {inst.status === 'generated' && new Date(inst.month_date) > new Date() && new Date(inst.month_date).getMonth() !== new Date().getMonth() ? 'scheduled' : inst.status}
                                         </Badge>
+                                        {versions.find(v => v.id === inst.contract_version_id)?.effective_end_date && (
+                                            <Badge variant="outline" className="text-[10px] h-5 ml-2 border-orange-500/20 text-orange-400 bg-orange-500/5">
+                                                Package
+                                            </Badge>
+                                        )}
                                     </div>
                                 </div>
 
@@ -603,32 +703,34 @@ export default function RetainerDetailPage() {
                                                         </Badge>
                                                     </div>
                                                     {/* Quick Actions */}
-                                                    <div className="flex items-center border-l border-white/10 pl-2 ml-2 gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className={cn("h-6 w-6 p-0 hover:text-white", ms.status === 'RECEIVED' ? "text-emerald-500" : "text-zinc-400")}
-                                                            title="Mark as Paid"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleMarkMilestonePaid(ms);
-                                                            }}
-                                                        >
-                                                            {/* Check Icon */}
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="h-6 w-6 p-0 text-zinc-400 hover:text-white"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setEditMilestone(ms);
-                                                            }}
-                                                        >
-                                                            <Clock size={12} />
-                                                        </Button>
-                                                    </div>
+                                                    {!ms.is_virtual && (
+                                                        <div className="flex items-center border-l border-white/10 pl-2 ml-2 gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className={cn("h-6 w-6 p-0 hover:text-white", ms.status === 'RECEIVED' ? "text-emerald-500" : "text-zinc-400")}
+                                                                title="Mark as Paid"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleMarkMilestonePaid(ms);
+                                                                }}
+                                                            >
+                                                                {/* Check Icon */}
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-6 w-6 p-0 text-zinc-400 hover:text-white"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditMilestone(ms);
+                                                                }}
+                                                            >
+                                                                <Clock size={12} />
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                             {selectedInstanceMilestones.length === 0 && <div className="text-zinc-500 italic text-xs">No milestones found.</div>}
@@ -649,6 +751,16 @@ export default function RetainerDetailPage() {
                 onSave={() => {
                     // Refresh data
                     if (selectedInstance) handleViewInstance(selectedInstance);
+                    fetchData();
+                }}
+            />
+
+            <BuyPackageDialog
+                isOpen={isPackageOpen}
+                onClose={() => setIsPackageOpen(false)}
+                contract={contract}
+                currentVersion={versions[0] || null} // Assuming versions are sorted desc by date, versions[0] is the current one
+                onSuccess={() => {
                     fetchData();
                 }}
             />

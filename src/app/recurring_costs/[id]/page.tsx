@@ -84,7 +84,8 @@ export default function RecurringRuleDetail() {
             .from('expenses')
             .select('*')
             .eq('recurring_rule_id', id)
-            .order('date', { ascending: false });
+            .order('date', { ascending: false })
+            .order('created_at', { ascending: false });
 
         if (historyData) setHistory(historyData);
 
@@ -194,16 +195,33 @@ export default function RecurringRuleDetail() {
 
             if (error) throw error;
 
-            // 2. Sync metadata on SCHEDULED future expenses
-            await supabase
+            // 2. Sync metadata AND DATE on SCHEDULED future expenses
+            const { data: scheduledItems } = await supabase
                 .from('expenses')
-                .update({
-                    vendor: formData.vendor || formData.name,
-                    category: formData.category,
-                    description: `${formData.name} (Recurring)`
-                })
+                .select('id, date')
                 .eq('recurring_rule_id', id)
                 .eq('status', 'SCHEDULED');
+
+            if (scheduledItems && scheduledItems.length > 0) {
+                const dueDay = parseInt(formData.due_day);
+                
+                for (const item of scheduledItems) {
+                    const itemDate = parseISO(item.date);
+                    const daysInMonth = endOfMonth(itemDate).getDate();
+                    const clampedDay = Math.min(dueDay, daysInMonth);
+                    const newDueDate = format(setDate(itemDate, clampedDay), 'yyyy-MM-dd');
+
+                    await supabase
+                        .from('expenses')
+                        .update({
+                            date: newDueDate,
+                            vendor: formData.vendor || formData.name,
+                            category: formData.category,
+                            description: `${formData.name} (Recurring)`
+                        })
+                        .eq('id', item.id);
+                }
+            }
 
             // 3. Handle start_month change
             if (newStartMonth && oldStartMonth && newStartMonth !== oldStartMonth) {

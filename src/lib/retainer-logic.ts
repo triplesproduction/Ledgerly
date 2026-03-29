@@ -37,11 +37,8 @@ export async function generateRetainerInstances() {
     }
 
     const today = startOfDay(new Date());
-    // Generate for Current Month and Next Month
-    const targetMonths = [
-        startOfMonth(today),
-        startOfMonth(addMonths(today, 1))
-    ];
+    // Generate for Current Month and up to 4 months ahead (to support 90-day forecasts)
+    const cutoffDate = startOfMonth(addMonths(today, 4));
 
     for (const contract of contracts) {
         // Fetch Versions for this contract
@@ -58,20 +55,14 @@ export async function generateRetainerInstances() {
         const earliestDate = parseISO(versions[0].effective_start_date);
         let iteratorDate = startOfMonth(earliestDate);
 
-        // We generate up to next month (relative to today)
-        const cutoffDate = startOfMonth(addMonths(today, 1));
-
         while (!isAfter(iteratorDate, cutoffDate)) {
             const monthStart = iteratorDate;
 
             // 2. Determine Version for this Month
-            // Value is applicable if: monthStart >= effective_start && (no end or monthStart <= effective_end)
-            // Since we sorted asc, we can find the *latest* matching version.
             const validVersion = versions.slice().reverse().find((v: ContractVersion) => {
                 const start = parseISO(v.effective_start_date);
                 const end = v.effective_end_date ? parseISO(v.effective_end_date) : null;
 
-                // Using startOfMonth comparisons
                 const isStarted = !isBefore(monthStart, startOfMonth(start));
                 const isNotEnded = !end || !isAfter(monthStart, endOfMonth(end));
 
@@ -79,54 +70,56 @@ export async function generateRetainerInstances() {
             });
 
             // Increment loop for next iteration at the end (or continue)
-            // Function to advance iterator
             const next = () => { iteratorDate = addMonths(iteratorDate, 1); };
 
             if (!validVersion) {
-                // No active pricing version for this month
                 next();
                 continue;
             }
 
             // 3. Idempotency Check
-            // Check if instance exists for this Version + Month
+            const versionIds = versions.map((v: ContractVersion) => v.id);
             const { count } = await supabase
                 .from('monthly_instances')
                 .select('id', { count: 'exact', head: true })
-                .eq('contract_version_id', validVersion.id)
-                .eq('month_date', format(monthStart, 'yyyy-MM-dd'));
+                .in('contract_version_id', versionIds)
+                .gte('month_date', format(startOfMonth(monthStart), 'yyyy-MM-dd'))
+                .lte('month_date', format(endOfMonth(monthStart), 'yyyy-MM-dd'));
 
             if (count && count > 0) {
-                // Already generated
                 next();
                 continue;
             }
 
             // 4. Generate Instance & Milestones
-
-            // A. Create Instance
+            const isFutureMonth = isAfter(startOfMonth(monthStart), startOfMonth(new Date()));
+            
             const { data: instanceData, error: instError } = await supabase
                 .from('monthly_instances')
                 .insert({
                     contract_version_id: validVersion.id,
                     month_date: format(monthStart, 'yyyy-MM-dd'),
                     total_due: validVersion.monthly_price,
-                    status: 'generated'
+                    status: isFutureMonth ? 'scheduled' : 'generated'
                 })
                 .select();
 
             const instance = instanceData?.[0];
 
             if (instError || !instance) {
-                console.error("Failed to create instance:", JSON.stringify({
-                    error: instError,
-                    contractId: contract.id,
-                    versionId: validVersion.id,
-                    monthDate: format(monthStart, 'yyyy-MM-dd')
-                }, null, 2));
+                console.error("Failed to create instance:", instError);
                 next();
                 continue;
             }
+
+            // Cleanup any existing orphan milestones
+            await supabase.from('income')
+                .delete()
+                .eq('client_id', contract.client_id)
+                .eq('service_id', contract.service_id)
+                .gte('date', format(startOfMonth(monthStart), 'yyyy-MM-dd'))
+                .lte('date', format(endOfMonth(monthStart), 'yyyy-MM-dd'))
+                .in('status', ['PENDING', 'OVERDUE']);
 
             // B. Calculate Milestones
             const milestones = calculateMilestones(validVersion.monthly_price, validVersion.payment_structure || [], monthStart);
@@ -140,7 +133,7 @@ export async function generateRetainerInstances() {
                 date: m.date,
                 description: `${contract.name} - ${m.name}`,
                 category: 'Retainer',
-                status: 'EXPECTED',
+                status: 'PENDING',
                 milestone_label: m.name
             }));
 
@@ -149,14 +142,12 @@ export async function generateRetainerInstances() {
                 if (incError) console.error("Failed to insert milestones:", incError);
             }
 
-            // Move to next month
             next();
         }
     }
 }
 
 export function calculateMilestones(total: number, structure: MilestoneConfig[], baseDate: Date) {
-    // If no structure, default to 100% upfront
     if (!structure || structure.length === 0) {
         return [{
             name: "Full Payment",
@@ -168,7 +159,6 @@ export function calculateMilestones(total: number, structure: MilestoneConfig[],
     let remaining = total;
     const results = [];
 
-    // Process non-remainder items first
     for (const step of structure) {
         if (step.type === 'remainder') continue;
 
@@ -184,12 +174,11 @@ export function calculateMilestones(total: number, structure: MilestoneConfig[],
         remaining -= amount;
     }
 
-    // Process remainder
     const remainderStep = structure.find(s => s.type === 'remainder');
     if (remainderStep) {
         results.push({
             name: remainderStep.name,
-            amount: remaining, // Whatever is left
+            amount: remaining,
             date: format(addDays(baseDate, remainderStep.day_offset), 'yyyy-MM-dd')
         });
     }
