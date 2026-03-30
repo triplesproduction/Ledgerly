@@ -69,22 +69,31 @@ export async function generateExpenseInstances() {
             const expectedDate = setDate(monthStart, dueDay);
             const expectedDateStr = format(expectedDate, 'yyyy-MM-dd');
 
-            // D. Check for existing instance
-            const { data: existing, error: fetchError } = await supabase
+            // D. Check for existing instances (Using select to avoid crash on existing duplicates)
+            const { data: existingRecords, error: fetchError } = await supabase
                 .from('expenses')
                 .select('id, date, amount, status')
                 .eq('recurring_rule_id', rule.id)
                 .gte('date', format(startOfMonth(monthStart), 'yyyy-MM-dd'))
                 .lte('date', format(endOfMonth(monthStart), 'yyyy-MM-dd'))
-                .maybeSingle();
+                .order('created_at', { ascending: true }); // Get earliest first
 
-            if (existing) {
-                // E. Update existing SCHEDULED instances if rule changed (Sync)
+            if (existingRecords && existingRecords.length > 0) {
+                const existing = existingRecords[0];
+
+                // 🔌 AUTO-HEAL: If duplicates exist, nuke them!
+                if (existingRecords.length > 1) {
+                    const idsToRemove = existingRecords.slice(1).map(e => e.id);
+                    console.log(`🧼 Deduplicating rule ${rule.name} for ${monthStart}: removing ${idsToRemove.length} ghosts`);
+                    await supabase.from('expenses').delete().in('id', idsToRemove);
+                }
+
+                // E. Update existing SCHEDULED instances (Sync)
                 if (existing.status === 'SCHEDULED' || existing.status === 'EXPECTED') {
                     const needsUpdate = existing.date !== expectedDateStr || Number(existing.amount) !== amount;
                     
                     if (needsUpdate) {
-                        console.log(`🔄 Syncing existing instance for ${rule.name}: ${existing.date} -> ${expectedDateStr}`);
+                        console.log(`🔄 Syncing rule ${rule.name}: ${existing.date} -> ${expectedDateStr}`);
                         await supabase
                             .from('expenses')
                             .update({
@@ -100,7 +109,7 @@ export async function generateExpenseInstances() {
                 continue;
             }
 
-            // F. Generate Instance (Insert)
+            // F. Generate Instance (Insert - Safe now)
             const { error: insertError } = await supabase
                 .from('expenses')
                 .insert({
