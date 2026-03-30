@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { subDays, addDays, format, startOfDay, endOfDay, eachDayOfInterval, isSameDay } from "date-fns";
+import { subDays, addDays, format, startOfDay, endOfDay, eachDayOfInterval, isSameDay, parseISO, startOfMonth } from "date-fns";
 import { supabase } from "@/lib/supabase";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -39,48 +39,51 @@ export function RevenueAreaChart({ range = "30" }: { range?: string }) {
             const endStr = format(horizon, 'yyyy-MM-dd');
 
             try {
-                // 1. Fetch Future Ledger Items
-                // We fetch things dated today or in the future that aren't finalized yet OR are scheduled
+                const startOfLastMonth = format(startOfMonth(subDays(today, 30)), 'yyyy-MM-dd');
+                
+                // 1. Fetch Future & Outstanding Ledger Items
                 const { data: income } = await supabase
                     .from('income')
-                    .select('amount, date, status')
-                    .gte('date', startStr)
+                    .select('amount, date, expected_date, status')
+                    .gte('date', startOfLastMonth) // Include outstanding recent items
                     .lte('date', endStr)
-                    .neq('status', 'RECEIVED'); // Forecast only Pending/Expected
+                    .neq('status', 'RECEIVED'); 
 
                 const { data: expenses } = await supabase
                     .from('expenses')
                     .select('amount, date, status')
-                    .gte('date', startStr)
+                    .gte('date', startOfLastMonth)
                     .lte('date', endStr)
-                    .neq('status', 'PAID'); // Forecast only Unpaid/Scheduled
+                    .neq('status', 'PAID'); 
 
-                // 2. Create exactly 10 data points by dividing the range into 10 intervals
+                // 2. Create exactly 10 data points
                 const NUM_POINTS = 10;
                 const intervalDays = Math.ceil(days / NUM_POINTS);
                 const chartData = [];
 
-                for (let i = 0; i < NUM_POINTS; i++) {
-                    const intervalStart = addDays(today, i * intervalDays);
-                    const intervalEnd = addDays(today, Math.min((i + 1) * intervalDays, days));
+                // Helper to get effective date
+                const getEffectiveDate = (item: any) => item.expected_date ? parseISO(item.expected_date) : parseISO(item.date);
 
-                    // Create a label for this interval
-                    const label = i === 0 ? 'Today' :
+                for (let i = 0; i < NUM_POINTS; i++) {
+                    const intervalStart = i === 0 ? startOfDay(subDays(today, 30)) : startOfDay(addDays(today, (i * intervalDays)));
+                    const intervalEnd = i === 0 ? endOfDay(today) : endOfDay(addDays(today, Math.min((i + 1) * intervalDays, days)));
+
+                    const label = i === 0 ? 'Today*' :
                         i === NUM_POINTS - 1 ? format(intervalEnd, 'MMM dd') :
                             format(intervalStart, 'MMM dd');
 
-                    // Sum income and expenses that fall within this interval
+                    // Sum income and expenses
                     const intervalIncome = (income || [])
                         .filter(item => {
-                            const itemDate = new Date(item.date);
-                            return itemDate >= intervalStart && itemDate <= intervalEnd;
+                            const d = getEffectiveDate(item);
+                            return d >= intervalStart && d <= intervalEnd;
                         })
                         .reduce((sum, item) => sum + Number(item.amount), 0);
 
                     const intervalExpense = (expenses || [])
                         .filter(item => {
-                            const itemDate = new Date(item.date);
-                            return itemDate >= intervalStart && itemDate <= intervalEnd;
+                            const d = parseISO(item.date);
+                            return d >= intervalStart && d <= intervalEnd;
                         })
                         .reduce((sum, item) => sum + Number(item.amount), 0);
 
@@ -93,7 +96,7 @@ export function RevenueAreaChart({ range = "30" }: { range?: string }) {
 
                 setData(chartData);
             } catch (err) {
-                // Forecast fetch error - silently fail in production
+                console.error("Forecast Error:", err);
             } finally {
                 setIsLoading(false);
             }
