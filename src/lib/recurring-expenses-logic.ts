@@ -69,23 +69,44 @@ export async function generateExpenseInstances() {
             const expectedDate = setDate(monthStart, dueDay);
             const expectedDateStr = format(expectedDate, 'yyyy-MM-dd');
 
-            // D. Idempotency Check
-            const { count } = await supabase
+            // D. Check for existing instance
+            const { data: existing, error: fetchError } = await supabase
                 .from('expenses')
-                .select('id', { count: 'exact', head: true })
+                .select('id, date, amount, status')
                 .eq('recurring_rule_id', rule.id)
                 .gte('date', format(startOfMonth(monthStart), 'yyyy-MM-dd'))
-                .lte('date', format(endOfMonth(monthStart), 'yyyy-MM-dd'));
+                .lte('date', format(endOfMonth(monthStart), 'yyyy-MM-dd'))
+                .maybeSingle();
 
-            if (count && count > 0) continue;
+            if (existing) {
+                // E. Update existing SCHEDULED instances if rule changed (Sync)
+                if (existing.status === 'SCHEDULED' || existing.status === 'EXPECTED') {
+                    const needsUpdate = existing.date !== expectedDateStr || Number(existing.amount) !== amount;
+                    
+                    if (needsUpdate) {
+                        console.log(`🔄 Syncing existing instance for ${rule.name}: ${existing.date} -> ${expectedDateStr}`);
+                        await supabase
+                            .from('expenses')
+                            .update({
+                                date: expectedDateStr,
+                                amount: amount,
+                                description: `${rule.name} (Recurring)`,
+                                vendor: rule.vendor,
+                                category: rule.category
+                            })
+                            .eq('id', existing.id);
+                    }
+                }
+                continue;
+            }
 
-            // E. Generate Instance
+            // F. Generate Instance (Insert)
             const { error: insertError } = await supabase
                 .from('expenses')
                 .insert({
                     recurring_rule_id: rule.id,
                     date: expectedDateStr,
-                    amount: amount, // Use versioned amount
+                    amount: amount, 
                     description: `${rule.name} (Recurring)`,
                     vendor: rule.vendor,
                     category: rule.category,

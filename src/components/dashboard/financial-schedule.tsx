@@ -49,11 +49,15 @@ export function FinancialSchedule() {
                 is_recurring: !!item.recurring_rule_id
             }));
 
-            // ⚡ SMART SORTING: Recurring First, then Date ASC
+            // ⚡ CHRONOLOGICAL SORTING: Date ASC (Primary), Recurring First within same day (Secondary)
             processedExpenses.sort((a, b) => {
+                const dateCompare = a.date.localeCompare(b.date);
+                if (dateCompare !== 0) return dateCompare;
+                
+                // If same date, show recurring first
                 if (a.is_recurring && !b.is_recurring) return -1;
                 if (!a.is_recurring && b.is_recurring) return 1;
-                return a.date.localeCompare(b.date);
+                return 0;
             });
 
             setPayables(processedExpenses);
