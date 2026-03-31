@@ -174,7 +174,7 @@ export function AddOfficeExpenseDialog({
       {!externalOpen && (
         <DialogTrigger asChild>
           <Button className="rounded-xl bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/20 px-6 font-semibold h-11">
-            <Plus size={18} className="mr-2" /> Add Office Expense
+            <Plus size={18} className="mr-2" /> Add Expense
           </Button>
         </DialogTrigger>
       )}
@@ -186,7 +186,7 @@ export function AddOfficeExpenseDialog({
           </div>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight text-white">
-              {initialData?.id && !initialData.item_name ? "Edit Office Expense" : "Record Office Expense"}
+              {initialData?.id && !initialData.item_name ? "Edit Expense" : "Record Expense"}
             </DialogTitle>
             <p className="text-[10px] font-bold text-zinc-500 tracking-[0.05em] uppercase">Documenting Internal Agency Outflow</p>
           </DialogHeader>

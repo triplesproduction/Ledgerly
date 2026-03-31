@@ -173,32 +173,7 @@ export function LoanManagement({ loans, repayments, onSuccess, isAddingLoan, onA
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-card border border-white/5 p-6 rounded-2xl shadow-xl">
-          <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">
-            Total Borrowed
-          </p>
-          <p className="text-2xl font-bold text-white italic tracking-tight">
-            ₹{loans.reduce((sum, l) => sum + Number(l.amount_received), 0).toLocaleString()}
-          </p>
-        </Card>
-        <Card className="bg-card border border-white/5 p-6 rounded-2xl shadow-xl">
-          <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">
-            Total Repaid
-          </p>
-          <p className="text-2xl font-bold text-emerald-500 italic tracking-tight">
-            ₹{repayments.reduce((sum, r) => sum + Number(r.amount_paid), 0).toLocaleString()}
-          </p>
-        </Card>
-        <Card className="bg-card border border-white/5 p-6 rounded-2xl shadow-xl border-l-orange-500/50">
-          <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">
-            Net Liability
-          </p>
-          <p className="text-2xl font-bold text-orange-500 italic tracking-tight">
-            ₹{(loans.reduce((sum, l) => sum + Number(l.amount_received), 0) - repayments.reduce((sum, r) => sum + Number(r.amount_paid), 0)).toLocaleString()}
-          </p>
-        </Card>
-      </div>
+
 
       <Card className="rounded-2xl border border-white/5 bg-card overflow-hidden shadow-2xl">
         <Table>

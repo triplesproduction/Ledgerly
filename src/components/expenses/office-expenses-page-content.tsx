@@ -29,11 +29,13 @@ import { cn } from "@/lib/utils";
 import { AddOfficeExpenseDialog } from "@/components/expenses/add-office-expense-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FundsWithDad } from "@/components/expenses/funds-with-dad";
 import { PurchasePlanner } from "@/components/expenses/purchase-planner";
 import { LoanManagement } from "@/components/expenses/loan-management";
 import { Label } from "@/components/ui/label";
 import { ExpenseTrendChart, CategoryBreakdownChart } from "@/components/expenses/charts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Category {
     id: string;
@@ -49,6 +51,8 @@ export default function OfficeExpensesPageContent() {
     const [expensesData, setExpensesData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [paidByFilter, setPaidByFilter] = useState("all");
     const [activeTab, setActiveTab] = useState("analytics");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -57,6 +61,7 @@ export default function OfficeExpensesPageContent() {
     const [isAddingPlan, setIsAddingPlan] = useState(false);
     const [isAddingLoan, setIsAddingLoan] = useState(false);
     const [editingExpense, setEditingExpense] = useState<any | null>(null);
+    const [isChartPopupOpen, setIsChartPopupOpen] = useState(false);
     const ITEMS_PER_PAGE = 50;
 
     // Metrics
@@ -69,6 +74,11 @@ export default function OfficeExpensesPageContent() {
         totalSpentByDad: 0,
         totalBorrowed: 0,
         totalRepaid: 0,
+    });
+    const [viewMetrics, setViewMetrics] = useState({
+        total: 0,
+        you: 0,
+        dad: 0
     });
 
     const [trendData, setTrendData] = useState<any[]>([]);
@@ -102,8 +112,16 @@ export default function OfficeExpensesPageContent() {
         const limit = offset + ITEMS_PER_PAGE - 1;
         
         let tableQuery = supabase.from('expenses').select('*', { count: 'exact' }).ilike('expense_type', 'office_%');
+        tableQuery = tableQuery.gte('date', fromStr).lte('date', toStr);
+        
         if (categoryFilter !== 'all') {
             tableQuery = tableQuery.eq('category', categoryFilter);
+        }
+        if (paidByFilter !== 'all') {
+            tableQuery = tableQuery.eq('expense_type', paidByFilter === 'You' ? 'office_you' : 'office_dad');
+        }
+        if (searchTerm.trim()) {
+            tableQuery = tableQuery.or(`description.ilike.%${searchTerm}%,vendor.ilike.%${searchTerm}%`);
         }
         
         const { data: expenses, count } = await tableQuery.order('date', { ascending: false }).range(offset, limit);
@@ -112,6 +130,7 @@ export default function OfficeExpensesPageContent() {
 
         // 2. Fetch All Data for Analytics
         const { data: allExpenses } = await supabase.from('expenses').select('amount, expense_type, date, category').ilike('expense_type', 'office_%');
+        let vMet = { total: 0, you: 0, dad: 0 };
         const { data: allTransfers } = await supabase.from('fund_transfers').select('*').order('date', { ascending: false });
         if (allTransfers) setTransfers(allTransfers);
         const { data: allLoans } = await supabase.from('loans').select('amount_received, date');
@@ -145,7 +164,19 @@ export default function OfficeExpensesPageContent() {
             if (monthlyMap[mName] !== undefined) monthlyMap[mName] += amt;
 
             categoryMap[exp.category] = (categoryMap[exp.category] || 0) + amt;
+
+            // View Metrics Calculation (Filtered by State)
+            const matchesCategory = categoryFilter === 'all' || exp.category === categoryFilter;
+            const matchesPaidBy = paidByFilter === 'all' || (paidByFilter === 'You' ? exp.expense_type === 'office_you' : exp.expense_type === 'office_dad');
+            
+            if (matchesCategory && matchesPaidBy) {
+                if (exp.expense_type === 'office_you') vMet.you += amt;
+                if (exp.expense_type === 'office_dad') vMet.dad += amt;
+                vMet.total += amt;
+            }
         });
+
+        setViewMetrics(vMet);
 
         setTrendData(Object.entries(monthlyMap).map(([name, amount]) => ({ name, amount })));
         setCategoryData(Object.entries(categoryMap).map(([name, value]) => ({ 
@@ -200,7 +231,7 @@ export default function OfficeExpensesPageContent() {
             supabase.channel('repay_updates').on('postgres_changes', { event: '*', schema: 'public', table: 'loan_repayments' }, fetchAllData).subscribe()
         ];
         return () => { subs.forEach(s => supabase.removeChannel(s)); };
-    }, [categoryFilter, page]);
+    }, [categoryFilter, paidByFilter, page, searchParams, searchTerm]);
 
     const handleDeleteExpense = async (expenseId: string) => {
         if (!confirm("Are you sure you want to delete this expense?")) return;
@@ -220,7 +251,7 @@ export default function OfficeExpensesPageContent() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent text-foreground font-sans p-6 space-y-8 max-w-[1600px] mx-auto pb-32 lg:pb-12">
+        <div className="min-h-screen bg-transparent text-foreground font-sans p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-[1600px] mx-auto pb-32 lg:pb-12">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
@@ -233,19 +264,24 @@ export default function OfficeExpensesPageContent() {
                 </div>
             </div>
 
-            {/* Tab Navigation */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-8">
-                <div className="flex items-center justify-between">
-                    <TabsList className="bg-zinc-900/50 border border-white/5 p-1 rounded-2xl h-12">
-                        <TabsTrigger value="analytics" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Analytics</TabsTrigger>
-                        <TabsTrigger value="expenses" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Expenses</TabsTrigger>
-                        <TabsTrigger value="planner" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Planner</TabsTrigger>
-                        <TabsTrigger value="loans" className="px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-xs font-bold uppercase tracking-widest">Loans</TabsTrigger>
-                    </TabsList>
+            {/* Tab Navigation & Metrics Row */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6 sm:space-y-8">
+                <div className="relative flex items-center justify-between w-full border-b border-white/5 pb-4 px-1">
+                    {/* Tabs (Left) */}
+                    <div className="flex items-center overflow-x-auto no-scrollbar -mx-1 px-1">
+                        <TabsList className="bg-zinc-900/50 border border-white/5 p-1 rounded-2xl h-11 sm:h-12 w-fit shrink-0">
+                            <TabsTrigger value="analytics" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Analytics</TabsTrigger>
+                            <TabsTrigger value="expenses" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Expenses</TabsTrigger>
+                            <TabsTrigger value="planner" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Planner</TabsTrigger>
+                            <TabsTrigger value="loans" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Loans</TabsTrigger>
+                        </TabsList>
+                    </div>
 
-                    <div className="flex items-center gap-4">
+                    {/* Actions (Right) */}
+                    <div className="flex items-center gap-3 sm:gap-5 z-10">
+                        {/* Dynamic Metrics Moved to Right Side */}
                         {activeTab === 'analytics' && (
-                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-5 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in slide-in-from-right-2 duration-300">
+                            <div className="hidden lg:flex items-center bg-orange-500/10 border border-orange-500/20 px-4 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
                                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Expense</span>
                                 <span className="text-sm font-black text-white tabular-nums">
@@ -254,7 +290,7 @@ export default function OfficeExpensesPageContent() {
                             </div>
                         )}
                         {activeTab === 'planner' && (
-                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-5 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in slide-in-from-right-2 duration-300">
+                            <div className="hidden lg:flex items-center bg-orange-500/10 border border-orange-500/20 px-4 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
                                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Required</span>
                                 <span className="text-sm font-black text-white tabular-nums">
@@ -262,7 +298,17 @@ export default function OfficeExpensesPageContent() {
                                 </span>
                             </div>
                         )}
-                        {(activeTab === 'expenses' || activeTab === 'analytics') && (
+                        {activeTab === 'loans' && (
+                            <div className="hidden lg:flex items-center bg-orange-500/10 border border-orange-500/20 px-4 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Liability</span>
+                                <span className="text-sm font-black text-white tabular-nums">
+                                    {formatCurrency(metrics.totalBorrowed - metrics.totalRepaid).replace('.00', '')}
+                                </span>
+                            </div>
+                        )}
+
+                        {activeTab === 'analytics' && (
                             <AddOfficeExpenseDialog 
                                 paymentMethods={paymentMethods} 
                                 categories={categories}
@@ -280,10 +326,55 @@ export default function OfficeExpensesPageContent() {
                                 }}
                             />
                         )}
+
+                        {activeTab === 'expenses' && (
+                            <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="flex bg-white/5 rounded-xl p-1 border border-white/5">
+                                    {['all', 'You', 'Dad'].map((opt) => (
+                                        <button 
+                                            key={opt}
+                                            onClick={() => setPaidByFilter(opt as any)}
+                                            className={cn(
+                                                "px-4 h-8 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                                                paidByFilter === opt ? "bg-orange-600 text-white shadow-lg shadow-orange-500/20" : "text-zinc-500 hover:text-zinc-300"
+                                            )}
+                                        >
+                                            {opt === 'all' ? 'All' : opt === 'You' ? 'Me' : 'Dad'}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <Button 
+                                    onClick={() => setIsChartPopupOpen(true)}
+                                    variant="outline"
+                                    className="border-white/5 bg-white/5 hover:bg-white/10 text-white rounded-xl h-10 px-4 font-bold flex items-center gap-2"
+                                >
+                                    <TrendingUp size={16} className="text-orange-500" /> View Chart
+                                </Button>
+
+                                <AddOfficeExpenseDialog 
+                                    paymentMethods={paymentMethods} 
+                                    categories={categories}
+                                    onSuccess={fetchAllData} 
+                                    initialData={editingExpense || convertingPlan}
+                                    open={!!(editingExpense || convertingPlan || isAddingExpense)}
+                                    onOpenChange={(open) => {
+                                        if (!open) {
+                                            setConvertingPlan(null);
+                                            setEditingExpense(null);
+                                            setIsAddingExpense(false);
+                                        } else {
+                                            setIsAddingExpense(true);
+                                        }
+                                    }}
+                                />
+                            </div>
+                        )}
+
                         {activeTab === 'planner' && (
                             <Button 
                                 onClick={() => setIsAddingPlan(true)}
-                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 px-6 gap-2 font-bold shadow-lg shadow-orange-500/20"
+                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 px-5 gap-2 font-bold shadow-lg shadow-orange-500/20"
                             >
                                 <Plus size={18} /> New Planned Purchase
                             </Button>
@@ -291,7 +382,7 @@ export default function OfficeExpensesPageContent() {
                         {activeTab === 'loans' && (
                             <Button 
                                 onClick={() => setIsAddingLoan(true)}
-                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 px-6 gap-2 font-bold shadow-lg shadow-orange-500/20"
+                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 px-5 gap-2 font-bold shadow-lg shadow-orange-500/20"
                             >
                                 <Plus size={18} /> Record New Loan
                             </Button>
@@ -304,55 +395,55 @@ export default function OfficeExpensesPageContent() {
                     {/* Top Summary Metrics - Premium Grid Layout */}
                     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                         
-                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-emerald-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                        <Card className="rounded-2xl border border-white/5 bg-card px-4 sm:px-6 py-5 sm:py-7 shadow-2xl backdrop-blur-md group hover:border-emerald-500/20 transition-all flex flex-col justify-between min-h-[140px] sm:min-h-[150px]">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors">
-                                    <TrendingUp className="text-emerald-500 h-5 w-5" />
+                                    <TrendingUp className="text-emerald-500 h-4 w-4 sm:h-5 sm:w-5" />
                                 </div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-emerald-500/80 transition-colors">Spent By You</p>
+                                <p className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-emerald-500/80 transition-colors">Spent By You</p>
                             </div>
-                            <p className="text-3xl font-bold text-emerald-500 tracking-tight mt-6">
+                            <p className="text-2xl sm:text-3xl font-bold text-emerald-500 tracking-tight mt-4 sm:mt-6">
                                 {formatCurrency(metrics.paidByYou).replace('.00', '')}
-                                <span className="text-base opacity-40">.00</span>
+                                <span className="text-sm sm:text-base opacity-40">.00</span>
                             </p>
                         </Card>
 
-                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-orange-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                        <Card className="rounded-2xl border border-white/5 bg-card px-4 sm:px-6 py-5 sm:py-7 shadow-2xl backdrop-blur-md group hover:border-orange-500/20 transition-all flex flex-col justify-between min-h-[140px] sm:min-h-[150px]">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-orange-500/10 rounded-xl group-hover:bg-orange-500/20 transition-colors">
-                                    <History className="text-orange-500 h-5 w-5" />
+                                    <History className="text-orange-500 h-4 w-4 sm:h-5 sm:w-5" />
                                 </div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-orange-500/80 transition-colors">Spent By Dad</p>
+                                <p className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-orange-500/80 transition-colors">Spent By Dad</p>
                             </div>
-                            <p className="text-3xl font-bold text-orange-500 tracking-tight mt-6">
+                            <p className="text-2xl sm:text-3xl font-bold text-orange-500 tracking-tight mt-4 sm:mt-6">
                                 {formatCurrency(metrics.paidByDad).replace('.00', '')}
-                                <span className="text-base opacity-40">.00</span>
+                                <span className="text-sm sm:text-base opacity-40">.00</span>
                             </p>
                         </Card>
 
-                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-blue-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                        <Card className="rounded-2xl border border-white/5 bg-card px-4 sm:px-6 py-5 sm:py-7 shadow-2xl backdrop-blur-md group hover:border-blue-500/20 transition-all flex flex-col justify-between min-h-[140px] sm:min-h-[150px]">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-blue-500/10 rounded-xl group-hover:bg-blue-500/20 transition-colors">
-                                    <Building2 className="text-blue-500 h-5 w-5" />
+                                    <Building2 className="text-blue-500 h-4 w-4 sm:h-5 sm:w-5" />
                                 </div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-blue-500/80 transition-colors">Dad Balance</p>
+                                <p className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-blue-500/80 transition-colors">Dad Balance</p>
                             </div>
-                            <p className="text-3xl font-bold text-blue-500 tracking-tight mt-6">
+                            <p className="text-2xl sm:text-3xl font-bold text-blue-500 tracking-tight mt-4 sm:mt-6">
                                 {formatCurrency(metrics.balanceWithDad).replace('.00', '')}
-                                <span className="text-base opacity-40">.00</span>
+                                <span className="text-sm sm:text-base opacity-40">.00</span>
                             </p>
                         </Card>
 
-                        <Card className="rounded-2xl border border-white/5 bg-card px-6 py-7 shadow-2xl backdrop-blur-md group hover:border-rose-500/20 transition-all flex flex-col justify-between min-h-[150px]">
+                        <Card className="rounded-2xl border border-white/5 bg-card px-4 sm:px-6 py-5 sm:py-7 shadow-2xl backdrop-blur-md group hover:border-rose-500/20 transition-all flex flex-col justify-between min-h-[140px] sm:min-h-[150px]">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-rose-500/10 rounded-xl group-hover:bg-rose-500/20 transition-colors">
-                                    <ArrowRightLeft className="text-rose-500 h-5 w-5" />
+                                    <ArrowRightLeft className="text-rose-500 h-4 w-4 sm:h-5 sm:w-5" />
                                 </div>
-                                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-rose-500/80 transition-colors">Loans Net</p>
+                                <p className="text-[9px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-rose-500/80 transition-colors">Loans Net</p>
                             </div>
-                            <p className="text-3xl font-bold text-rose-500 tracking-tight mt-6">
+                            <p className="text-2xl sm:text-3xl font-bold text-rose-500 tracking-tight mt-4 sm:mt-6">
                                 {formatCurrency(metrics.totalBorrowed - metrics.totalRepaid).replace('.00', '')}
-                                <span className="text-base opacity-40">.00</span>
+                                <span className="text-sm sm:text-base opacity-40">.00</span>
                             </p>
                         </Card>
                     </div>
@@ -405,35 +496,43 @@ export default function OfficeExpensesPageContent() {
                 </TabsContent>
 
                 {/* --- Expenses Tab --- */}
-                <TabsContent value="expenses" className="space-y-6 outline-none mt-0">
-                    <Card className="p-4 rounded-2xl border border-white/5 bg-zinc-900/10 backdrop-blur-sm overflow-hidden">
-                        <div className="flex items-center gap-4 overflow-x-auto pb-4 scroll-smooth">
-                            <button 
-                                onClick={() => setCategoryFilter('all')}
-                                className={cn(
-                                    "px-6 py-2 rounded-xl text-[10px] font-bold uppercase transition-all flex-shrink-0 border border-white/5",
-                                    categoryFilter === 'all' ? "bg-orange-600 text-white border-orange-600/20 shadow-lg shadow-orange-500/10" : "bg-white/5 text-zinc-500 hover:text-white"
-                                )}
-                            >
-                                All
-                            </button>
-                            {categories.map(cat => (
-                                <button 
-                                    key={cat.id}
-                                    onClick={() => setCategoryFilter(cat.slug)}
-                                    className={cn(
-                                        "px-6 py-2 rounded-xl text-[10px] font-bold uppercase transition-all flex-shrink-0 border border-white/5",
-                                        categoryFilter === cat.slug ? "bg-orange-600 text-white border-orange-600/20 shadow-lg shadow-orange-500/10" : "bg-white/5 text-zinc-500 hover:text-white"
-                                    )}
-                                >
-                                    {cat.name}
-                                </button>
-                            ))}
+                <TabsContent value="expenses" className="space-y-6 outline-none mt-0">                     <Card className="p-2 sm:p-3 rounded-2xl border border-white/5 bg-zinc-900/10 backdrop-blur-sm shadow-xl overflow-hidden">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-10 py-1">
+                            {/* 1. Category Dropdown */}
+                            <div className="w-full sm:w-[190px]">
+                                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                                    <SelectTrigger className="h-10 bg-white/5 border-white/5 rounded-xl text-xs font-bold uppercase tracking-tight text-zinc-300 hover:bg-white/[0.08] transition-all w-full">
+                                        <div className="flex items-center gap-2">
+                                            <ShoppingBag size={14} className="text-orange-500" />
+                                            <SelectValue placeholder="Category" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-950 border-white/10 text-white rounded-2xl">
+                                        <SelectItem value="all" className="py-2.5 px-4 focus:bg-orange-600/20 focus:text-orange-500 rounded-xl">All Categories</SelectItem>
+                                        <div className="h-px bg-white/5 my-1" />
+                                        {categories.map(cat => (
+                                            <SelectItem key={cat.id} value={cat.slug} className="py-2.5 px-4 focus:bg-orange-600/20 focus:text-orange-500 rounded-xl">
+                                                {cat.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* 2. Date Filter (Integrated) */}
+                            <div className="flex items-center justify-center w-full sm:w-auto">
+                                <Suspense fallback={<div className="h-10 w-32 animate-pulse bg-white/5 rounded-xl" />}>
+                                    <MonthFilter />
+                                </Suspense>
+                            </div>
+
+                            <div className="flex-1 hidden sm:block" />
                         </div>
                     </Card>
 
                     <Card className="rounded-2xl border border-white/5 bg-card overflow-hidden shadow-2xl">
-                        <Table>
+                        <div className="overflow-x-auto no-scrollbar">
+                            <Table className="min-w-[800px]">
                             <TableHeader className="bg-white/[0.02]">
                                 <TableRow className="border-white/5 hover:bg-transparent">
                                     <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 h-14 pl-8">Item</TableHead>
@@ -493,6 +592,7 @@ export default function OfficeExpensesPageContent() {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
                         {totalPages > 1 && (
                             <div className="p-6 border-t border-white/5 flex items-center justify-between text-xs font-bold text-zinc-500 uppercase tracking-widest">
                                 <div>Page {page} of {totalPages}</div>
@@ -527,6 +627,32 @@ export default function OfficeExpensesPageContent() {
                     />
                 </TabsContent>
             </Tabs>
+
+            {/* Quick Chart Modal */}
+            <Dialog open={isChartPopupOpen} onOpenChange={setIsChartPopupOpen}>
+                <DialogContent className="w-[95vw] max-w-4xl bg-zinc-950 border-white/5 p-4 sm:p-5 sm:pb-3 rounded-[2rem] shadow-2xl backdrop-blur-3xl outline-none gap-0 overflow-hidden">
+                    <DialogHeader className="mb-4 sm:mb-5 text-left">
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="p-2 bg-orange-600/20 rounded-xl">
+                                <TrendingUp className="text-orange-600 h-5 w-5 sm:h-6 sm:w-6" />
+                            </div>
+                            <DialogTitle className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                                Period Performance
+                            </DialogTitle>
+                        </div>
+                        <p className="text-zinc-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.1em]">Instant financial overview for the selected range.</p>
+                    </DialogHeader>
+
+                    <Card className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 sm:p-5 sm:pb-2 overflow-hidden shadow-2xl border-t border-white/10">
+                        <h3 className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <TrendingUp className="text-orange-500 h-3 w-3 sm:h-4 sm:w-4" /> Monthly Momentum
+                        </h3>
+                        <div className="h-[250px] sm:h-[380px] w-full">
+                            <ExpenseTrendChart data={trendData} />
+                        </div>
+                    </Card>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
