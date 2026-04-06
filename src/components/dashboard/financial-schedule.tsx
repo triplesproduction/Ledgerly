@@ -215,9 +215,11 @@ export function FinancialSchedule() {
 
         } else {
             // Expenses Logic
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
             const { error } = await supabase.from('expenses').update({
                 status: 'PAID',
-                paid_date: format(new Date(), 'yyyy-MM-dd')
+                paid_date: todayStr,
+                date: todayStr // Update 'date' field to match when it was paid
             }).eq('id', item.id);
 
             if (error) {

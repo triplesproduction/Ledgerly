@@ -112,7 +112,7 @@ export default function OfficeExpensesPageContent() {
         const limit = offset + ITEMS_PER_PAGE - 1;
         
         let tableQuery = supabase.from('expenses').select('*', { count: 'exact' }).ilike('expense_type', 'office_%');
-        tableQuery = tableQuery.gte('date', fromStr).lte('date', toStr);
+        tableQuery = tableQuery.neq('status', 'SCHEDULED').gte('date', fromStr).lte('date', toStr);
         
         if (categoryFilter !== 'all') {
             tableQuery = tableQuery.eq('category', categoryFilter);
@@ -129,7 +129,7 @@ export default function OfficeExpensesPageContent() {
         if (expenses) setExpensesData(expenses);
 
         // 2. Fetch All Data for Analytics
-        const { data: allExpenses } = await supabase.from('expenses').select('amount, expense_type, date, category').ilike('expense_type', 'office_%');
+        const { data: allExpenses } = await supabase.from('expenses').select('amount, expense_type, date, category').ilike('expense_type', 'office_%').neq('status', 'SCHEDULED');
         let vMet = { total: 0, you: 0, dad: 0 };
         const { data: allTransfers } = await supabase.from('fund_transfers').select('*').order('date', { ascending: false });
         if (allTransfers) setTransfers(allTransfers);
@@ -266,43 +266,43 @@ export default function OfficeExpensesPageContent() {
 
             {/* Tab Navigation & Metrics Row */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6 sm:space-y-8">
-                <div className="relative flex items-center justify-between w-full border-b border-white/5 pb-4 px-1">
-                    {/* Tabs (Left) */}
-                    <div className="flex items-center overflow-x-auto no-scrollbar -mx-1 px-1">
+                <div className="flex flex-col sm:flex-row items-center justify-between w-full border-b border-white/5 pb-4 px-1 gap-y-4 sm:gap-y-0">
+                    {/* Tabs (Left on Desktop, Top on Mobile) */}
+                    <div className="w-full sm:w-auto flex items-center overflow-x-auto no-scrollbar -mx-1 px-1">
                         <TabsList className="bg-zinc-900/50 border border-white/5 p-1 rounded-2xl h-11 sm:h-12 w-fit shrink-0">
-                            <TabsTrigger value="analytics" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Analytics</TabsTrigger>
-                            <TabsTrigger value="expenses" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Expenses</TabsTrigger>
-                            <TabsTrigger value="planner" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Planner</TabsTrigger>
-                            <TabsTrigger value="loans" className="px-4 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[10px] sm:text-xs font-bold uppercase tracking-widest flex-1 sm:flex-none">Loans</TabsTrigger>
+                            <TabsTrigger value="analytics" className="px-5 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[11px] sm:text-xs font-bold uppercase tracking-widest flex-none">Analytics</TabsTrigger>
+                            <TabsTrigger value="expenses" className="px-5 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[11px] sm:text-xs font-bold uppercase tracking-widest flex-none">Expenses</TabsTrigger>
+                            <TabsTrigger value="planner" className="px-5 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[11px] sm:text-xs font-bold uppercase tracking-widest flex-none">Planner</TabsTrigger>
+                            <TabsTrigger value="loans" className="px-5 sm:px-6 rounded-xl data-[state=active]:bg-orange-600 data-[state=active]:text-white transition-all text-[11px] sm:text-xs font-bold uppercase tracking-widest flex-none">Loans</TabsTrigger>
                         </TabsList>
                     </div>
 
-                    {/* Actions (Right) */}
-                    <div className="flex items-center gap-3 sm:gap-5 z-10">
-                        {/* Dynamic Metrics Moved to Right Side */}
+                    {/* Actions & Metrics (Right on Desktop, Bottom on Mobile) */}
+                    <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 sm:gap-5 z-10">
+                        {/* Dynamic Metrics */}
                         {activeTab === 'analytics' && (
-                            <div className="hidden lg:flex items-center bg-orange-500/10 border border-orange-500/20 px-4 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
+                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-3 sm:px-4 h-10 sm:h-11 rounded-xl gap-2 sm:gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
                                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Expense</span>
-                                <span className="text-sm font-black text-white tabular-nums">
+                                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.05em] sm:tracking-widest text-orange-500/80 whitespace-nowrap">Total</span>
+                                <span className="text-[11px] sm:text-sm font-black text-white tabular-nums">
                                     {formatCurrency(metrics.totalPeriodExpense).replace('.00', '')}
                                 </span>
                             </div>
                         )}
                         {activeTab === 'planner' && (
-                            <div className="hidden lg:flex items-center bg-orange-500/10 border border-orange-500/20 px-4 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
+                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-3 sm:px-4 h-10 sm:h-11 rounded-xl gap-2 sm:gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
                                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Required</span>
-                                <span className="text-sm font-black text-white tabular-nums">
+                                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.05em] sm:tracking-widest text-orange-500/80 whitespace-nowrap">Required</span>
+                                <span className="text-[11px] sm:text-sm font-black text-white tabular-nums">
                                     {formatCurrency(purchasePlans.filter(p => p.status === 'Planned').reduce((acc, curr) => acc + Number(curr.estimated_cost), 0)).replace('.00', '')}
                                 </span>
                             </div>
                         )}
                         {activeTab === 'loans' && (
-                            <div className="hidden lg:flex items-center bg-orange-500/10 border border-orange-500/20 px-4 h-11 rounded-xl gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
+                            <div className="flex items-center bg-orange-500/10 border border-orange-500/20 px-3 sm:px-4 h-10 sm:h-11 rounded-xl gap-2 sm:gap-3 shadow-lg shadow-orange-500/5 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-300">
                                 <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500/80 whitespace-nowrap">Total Liability</span>
-                                <span className="text-sm font-black text-white tabular-nums">
+                                <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.05em] sm:tracking-widest text-orange-500/80 whitespace-nowrap">Liability</span>
+                                <span className="text-[11px] sm:text-sm font-black text-white tabular-nums">
                                     {formatCurrency(metrics.totalBorrowed - metrics.totalRepaid).replace('.00', '')}
                                 </span>
                             </div>

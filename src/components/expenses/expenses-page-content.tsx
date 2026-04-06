@@ -11,6 +11,8 @@ import { startOfMonth, endOfMonth, format, isSameMonth } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { AddExpenseDialog } from "@/components/expenses/add-expense-dialog";
 import { EditExpenseDialog } from "@/components/expenses/edit-expense-dialog";
+import { ExpenseTrendsDialog } from "@/components/expenses/expense-trends-dialog";
+import { BarChart3 } from "lucide-react";
 
 type ExpenseItem = {
     id: string;
@@ -26,6 +28,7 @@ type ExpenseItem = {
 
 export default function ExpensesPageContent() {
     const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+    const [isTrendsOpen, setIsTrendsOpen] = useState(false);
 
     // Pagination & Data State
     const [expensesData, setExpensesData] = useState<ExpenseItem[]>([]);
@@ -90,6 +93,7 @@ export default function ExpensesPageContent() {
             .from('expenses')
             .select('*', { count: 'exact', head: true })
             .neq('status', 'ARCHIVED')
+            .neq('status', 'SCHEDULED')
             .or('category.is.null,category.not.ilike.%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
@@ -108,6 +112,7 @@ export default function ExpensesPageContent() {
             .from('expenses')
             .select('amount')
             .neq('status', 'ARCHIVED')
+            .neq('status', 'SCHEDULED')
             .or('category.is.null,category.not.ilike.%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
@@ -127,6 +132,7 @@ export default function ExpensesPageContent() {
             .from('expenses')
             .select('*')
             .neq('status', 'ARCHIVED')
+            .neq('status', 'SCHEDULED')
             .or('category.is.null,category.not.ilike.%transfer%')
             .gte('date', fromStr)
             .lte('date', toStr);
@@ -189,11 +195,21 @@ export default function ExpensesPageContent() {
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Expenses</h1>
                     <p className="text-muted-foreground mt-1">Track operational costs and expenses.</p>
                 </div>
-                <AddExpenseDialog
-                    categoryOptions={categoryOptions}
-                    paymentMethods={paymentMethods}
-                    onSuccess={fetchExpenses}
-                />
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <Button
+                        variant="outline"
+                        onClick={() => setIsTrendsOpen(true)}
+                        className="rounded-full border-white/10 hover:bg-white/5 text-zinc-400 hover:text-white px-5 font-medium flex items-center gap-2"
+                    >
+                        <BarChart3 size={16} />
+                        View Expense Trends
+                    </Button>
+                    <AddExpenseDialog
+                        categoryOptions={categoryOptions}
+                        paymentMethods={paymentMethods}
+                        onSuccess={fetchExpenses}
+                    />
+                </div>
             </div>
 
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 bg-card p-3 rounded-2xl border border-white/5 w-full shadow-lg shadow-black/20">
@@ -330,6 +346,12 @@ export default function ExpensesPageContent() {
                 categoryOptions={categoryOptions}
                 paymentMethods={paymentMethods}
                 onSuccess={fetchExpenses}
+            />
+
+            <ExpenseTrendsDialog 
+                open={isTrendsOpen} 
+                onOpenChange={setIsTrendsOpen} 
+                dateRange={{ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }} 
             />
         </div>
     );

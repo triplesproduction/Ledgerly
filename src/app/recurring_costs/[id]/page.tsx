@@ -377,10 +377,16 @@ export default function RecurringRuleDetail() {
         const isCurrentlyPaid = inst.status === 'PAID';
         const newStatus = isCurrentlyPaid ? 'PENDING_PAYMENT' : 'PAID';
         const paidDate = isCurrentlyPaid ? null : format(new Date(), 'yyyy-MM-dd');
+        
+        // When marking as PAID, we update both paid_date AND the record's main date to today
+        const updatePayload: any = { status: newStatus, paid_date: paidDate };
+        if (!isCurrentlyPaid) {
+            updatePayload.date = paidDate;
+        }
 
         const { error } = await supabase
             .from('expenses')
-            .update({ status: newStatus, paid_date: paidDate })
+            .update(updatePayload)
             .eq('id', inst.id);
 
         if (error) {

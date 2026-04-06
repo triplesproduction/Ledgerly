@@ -210,7 +210,11 @@ export default function RetainerDetailPage() {
                                 // Check if mDate < endDate
                                 const isBeforeEnd = !endDate || isBefore(startOfMonth(mDate), startOfMonth(endDate));
 
-                                return isAfterStart && isBeforeEnd;
+                                // CRITICAL: Skip instances that are 'paid' or 'partial' (likely package covered or manually settled)
+                                // We don't want to overwrite billing history for months that are already handled.
+                                const isSettled = inst.status === 'paid' || inst.status === 'partial';
+
+                                return isAfterStart && isBeforeEnd && !isSettled;
                             });
 
                             if (affectedInstances.length > 0) {
