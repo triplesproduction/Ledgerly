@@ -59,6 +59,9 @@ export function OutstandingTracker({ income }: OutstandingTrackerProps) {
                 </CardTitle>
             </CardHeader>
             <CardContent className="h-[350px] p-8 pt-4">
+                {chartData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-zinc-500 text-sm">No collection data for the selected period</div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -94,6 +97,7 @@ export function OutstandingTracker({ income }: OutstandingTrackerProps) {
                         <Bar dataKey="Overdue" stackId="a" fill="#27272a" radius={[4, 4, 0, 0]} barSize={32} />
                     </BarChart>
                 </ResponsiveContainer>
+                )}
             </CardContent>
         </Card>
     );

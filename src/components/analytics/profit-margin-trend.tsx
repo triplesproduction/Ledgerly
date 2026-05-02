@@ -45,6 +45,8 @@ export function ProfitMarginTrend({ income, expenses }: ProfitMarginTrendProps) 
         .sort((a, b) => a.fullDate.localeCompare(b.fullDate))
         .slice(-12); // Last 12 months
 
+    const hasData = chartData.some(d => d.Revenue > 0 || d.NetProfit !== 0);
+
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
@@ -81,6 +83,11 @@ export function ProfitMarginTrend({ income, expenses }: ProfitMarginTrendProps) 
                 </CardTitle>
             </CardHeader>
             <CardContent className="h-[350px] p-8 pt-4">
+                {!hasData ? (
+                    <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
+                        No profitability data for the selected period
+                    </div>
+                ) : (
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -128,6 +135,7 @@ export function ProfitMarginTrend({ income, expenses }: ProfitMarginTrendProps) 
                         <Line yAxisId="right" type="monotone" dataKey="Margin" stroke="#FFFFFF" strokeWidth={2} dot={{ r: 4, fill: '#18181b', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                     </ComposedChart>
                 </ResponsiveContainer>
+                )}
             </CardContent>
         </Card>
     );

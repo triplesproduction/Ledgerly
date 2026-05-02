@@ -4,10 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { PieChart as PieChartIcon } from "lucide-react";
 
-// STRICT BLACK / ORANGE / WHITE THEME
-// Primary: #FF5500 (Orange)
-// Secondary: #FFFFFF (White)
-// Tertiaries: Zinc Shades (Greys)
 const COLORS = [
     "#FF5500", // Orange
     "#FFFFFF", // White
@@ -64,34 +60,38 @@ export function SourceBreakdown({ data }: SourceBreakdownProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[350px] p-8 pt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={serviceData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={70}
-                                outerRadius={90}
-                                paddingAngle={5}
-                                dataKey="value"
-                                stroke="none"
-                            >
-                                {serviceData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend
-                                layout="vertical"
-                                verticalAlign="middle"
-                                align="right"
-                                iconType="circle"
-                                iconSize={8}
-                                wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-montserrat)' }}
-                                formatter={(value) => <span className="text-zinc-500 font-medium ml-1">{value}</span>}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {serviceData.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-zinc-500 text-sm">No service data available</div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={serviceData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={70}
+                                    outerRadius={90}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {serviceData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend
+                                    layout="vertical"
+                                    verticalAlign="middle"
+                                    align="right"
+                                    iconType="circle"
+                                    iconSize={8}
+                                    wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-montserrat)' }}
+                                    formatter={(value) => <span className="text-zinc-500 font-medium ml-1">{value}</span>}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
 
@@ -102,34 +102,38 @@ export function SourceBreakdown({ data }: SourceBreakdownProps) {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[350px] p-8 pt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={clientData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={70}
-                                outerRadius={90}
-                                paddingAngle={5}
-                                dataKey="value"
-                                stroke="none"
-                            >
-                                {clientData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend
-                                layout="vertical"
-                                verticalAlign="middle"
-                                align="right"
-                                iconType="circle"
-                                iconSize={8}
-                                wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-montserrat)' }}
-                                formatter={(value) => <span className="text-zinc-500 font-medium ml-1">{value.length > 15 ? value.substring(0, 15) + '...' : value}</span>}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {clientData.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-zinc-500 text-sm">No client data available</div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={clientData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={70}
+                                    outerRadius={90}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {clientData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend
+                                    layout="vertical"
+                                    verticalAlign="middle"
+                                    align="right"
+                                    iconType="circle"
+                                    iconSize={8}
+                                    wrapperStyle={{ fontSize: '11px', fontFamily: 'var(--font-montserrat)' }}
+                                    formatter={(value) => <span className="text-zinc-500 font-medium ml-1">{value.length > 15 ? value.substring(0, 15) + '...' : value}</span>}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
         </div>

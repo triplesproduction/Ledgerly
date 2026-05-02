@@ -11,7 +11,8 @@ import { NetProfitLineChart } from "@/components/charts/net-profit-line-chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { format, parseISO, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, subMonths, lastDayOfMonth } from "date-fns";
+import { generateReport } from "@/lib/pdf-generator";
 
 // Analytics Components
 import { SourceBreakdown } from "@/components/analytics/source-breakdown";
@@ -136,9 +137,32 @@ export default function ReportsPage() {
         fetchReportData(dateRange);
     }, [dateRange]);
 
-    const handleDownload = (reportName: string) => {
-        const fileName = reportName.toLowerCase().replace(/\s+/g, '-') + ".pdf";
-        alert(`Downloading ${fileName}...`);
+    const handleDownload = async (reportType: "pnl" | "income" | "expense") => {
+        const startDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1);
+        const endDate = lastDayOfMonth(startDate);
+        const reportStart = format(startDate, 'yyyy-MM-dd');
+        const reportEnd = format(endDate, 'yyyy-MM-dd');
+
+        // Fetch specifically for the selected month
+        const { data: expenses } = await supabase
+            .from('expenses')
+            .select('amount, category, date, status, vendor')
+            .gte('date', reportStart)
+            .lte('date', reportEnd)
+            .neq('status', 'SCHEDULED');
+
+        const { data: income } = await supabase
+            .from('income')
+            .select('amount, date, status, category, service_id, description, client:clients(name)')
+            .gte('date', reportStart)
+            .lte('date', reportEnd);
+
+        const payload = {
+            income: income || [],
+            expenses: expenses || []
+        };
+
+        generateReport(reportType, selectedYear, selectedMonth, payload);
     };
 
     return (
@@ -284,10 +308,7 @@ export default function ReportsPage() {
                             <h4 className="font-bold text-white mb-1">P&L Statement</h4>
                             <p className="text-xs text-zinc-500 mb-4">Income vs Expenses breakdown with net profit</p>
                             <Button
-                                onClick={() => {
-                                    const monthName = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1), 'MMMM yyyy');
-                                    alert(`P&L Statement for ${monthName} will be downloaded when implemented`);
-                                }}
+                                onClick={() => handleDownload("pnl")}
                                 className="w-full h-9 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg"
                             >
                                 <Download size={14} className="mr-2" />
@@ -306,10 +327,7 @@ export default function ReportsPage() {
                             <h4 className="font-bold text-white mb-1">Income Report</h4>
                             <p className="text-xs text-zinc-500 mb-4">Detailed income transactions and receivables</p>
                             <Button
-                                onClick={() => {
-                                    const monthName = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1), 'MMMM yyyy');
-                                    alert(`Income Report for ${monthName} will be downloaded when implemented`);
-                                }}
+                                onClick={() => handleDownload("income")}
                                 className="w-full h-9 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg"
                             >
                                 <Download size={14} className="mr-2" />
@@ -328,10 +346,7 @@ export default function ReportsPage() {
                             <h4 className="font-bold text-white mb-1">Expense Report</h4>
                             <p className="text-xs text-zinc-500 mb-4">Complete expense audit with categories</p>
                             <Button
-                                onClick={() => {
-                                    const monthName = format(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1), 'MMMM yyyy');
-                                    alert(`Expense Report for ${monthName} will be downloaded when implemented`);
-                                }}
+                                onClick={() => handleDownload("expense")}
                                 className="w-full h-9 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-lg"
                             >
                                 <Download size={14} className="mr-2" />

@@ -109,6 +109,9 @@ export function CashflowRunway({ income, expenses, totalLiquidity }: CashflowRun
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[350px] p-8 pt-4">
+                    {chartData.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-zinc-500 text-sm">No cashflow data for the selected period</div>
+                    ) : (
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -138,6 +141,7 @@ export function CashflowRunway({ income, expenses, totalLiquidity }: CashflowRun
                             <Line type="monotone" dataKey="net" stroke="#FF5500" strokeWidth={3} dot={{ r: 4, fill: '#18181b', strokeWidth: 2 }} activeDot={{ r: 6 }} />
                         </ComposedChart>
                     </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
         </div>
